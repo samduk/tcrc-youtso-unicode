@@ -485,11 +485,40 @@ CheckWord() {
     }
 }
 
+; does this text still contain non-ASCII legacy characters?
+HasHighLegacyChars(text) {
+    global LegacyMap
+    loop parse text {
+        if (Ord(A_LoopField) >= 0xA0 && LegacyMap.Has(A_LoopField))
+            return true
+    }
+    return false
+}
+
+; convert ONLY the non-ASCII legacy characters; plain ASCII is left alone
+; (pass 1 already converted ASCII inside legacy-font runs, so any ASCII
+;  still left is real English text that must not be touched)
+ConvertHighCharsOnly(text) {
+    global LegacyMap
+    out := ""
+    loop parse text {
+        if (Ord(A_LoopField) >= 0xA0 && LegacyMap.Has(A_LoopField))
+            out .= LegacyMap[A_LoopField]
+        else
+            out .= A_LoopField
+    }
+    return out
+}
+
 ConvertWordDoc(word, doc, legacyFont) {
     global LegacyMap
     word.ScreenUpdating := false
-    try {
-        for ch, rep in LegacyMap {
+
+    ; ---- pass 1: find & replace, character by character ----
+    ; (this preserves bold/size/etc. formatting inside paragraphs)
+    ; Each character gets its own try, so one failure cannot stop the rest.
+    for ch, rep in LegacyMap {
+        try {
             f := doc.Content.Find
             f.ClearFormatting()
             f.Replacement.ClearFormatting()
@@ -504,9 +533,40 @@ ConvertWordDoc(word, doc, legacyFont) {
             f.MatchWildcards := false
             f.Execute(,,,,,,,,, , 2)   ; wdReplaceAll
         }
-        ; final pass: any leftover characters still in the legacy font
-        ; (spaces etc.) -> just switch their font
-        if (legacyFont != "TCRC Youtso Unicode") {
+    }
+
+    ; ---- pass 2: sweep for anything find & replace missed ----
+    ; Some characters do not survive Word's find & replace. Any paragraph
+    ; that still contains non-ASCII legacy characters is converted directly.
+    swept := 0
+    try {
+        for para in doc.Paragraphs {
+            try {
+                rng := para.Range.Duplicate
+                ; leave the paragraph mark / table-cell mark out of the range
+                while (rng.End > rng.Start) {
+                    lastChar := SubStr(rng.Text, -1)
+                    if (lastChar = "`r" || lastChar = Chr(7))
+                        rng.MoveEnd(1, -1)   ; 1 = wdCharacter
+                    else
+                        break
+                }
+                text := rng.Text
+                if (text = "" || !HasHighLegacyChars(text))
+                    continue
+                converted := ConvertHighCharsOnly(text)
+                if (converted != text) {
+                    rng.Text := converted
+                    swept += 1
+                }
+            }
+        }
+    }
+
+    ; ---- pass 3: leftover characters still marked with the old font
+    ; (spaces etc.) -> just switch their font ----
+    if (legacyFont != "TCRC Youtso Unicode") {
+        try {
             f := doc.Content.Find
             f.ClearFormatting()
             f.Replacement.ClearFormatting()
@@ -518,6 +578,7 @@ ConvertWordDoc(word, doc, legacyFont) {
             f.Execute(,,,,,,,,, , 2)
         }
     }
+
     word.ScreenUpdating := true
     MsgBox "Conversion finished.`n`nCheck the text, then save the document.`nThe text is now Unicode in TCRC Youtso Unicode`n(you can switch to Monlam or any Unicode Tibetan font).", "TCRC Unicode Converter", "Iconi"
 }

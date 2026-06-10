@@ -131,6 +131,10 @@ mapping. So `tools/build_mapping.py`:
   Youtso typeface and keyboard (© 2000–2003). This project stands on their
   shoulders; the typeface remains their work and their copyright.
 - Revival, Unicode repair, converter, and packaging — **Samdup**.
+- Development was assisted by paid AI coding tools: **Claude** (Anthropic,
+  Claude Pro) and **Codex** (OpenAI, Pro) — used for font-table analysis,
+  the glyph-matching conversion table, and the build tooling, under
+  Samdup's direction and testing.
 
 ## Support this work ☕
 

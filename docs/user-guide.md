@@ -49,6 +49,23 @@ For any other program (Photoshop, posters, e-mail...): select the
 garbled legacy text and press **Ctrl+Alt+U** — it is replaced with
 Unicode in place.
 
+## 6. Tibetan numbers, the numpad, and Excel
+- The **numeric keypad** types Tibetan digits ༠-༩ when Tibetan mode is on
+  (Ctrl+Alt+T toggles; turn it off to type normal digits for calculations).
+- **Ctrl+Alt+N**: select a number (e.g. 900000) and press it — the number
+  becomes Tibetan digits with Indian-style grouping: ༩,༠༠,༠༠༠.
+- **Excel and math**: Excel can only calculate with real (western) numbers.
+  Tibetan digit characters are text to Excel. The trick to have BOTH:
+  1. Type real numbers in the cells (Tibetan mode off) — all formulas work.
+  2. Select the cells → right-click → Format Cells → Custom, and enter:
+     `[$-2000451]#,##0`
+     This keeps the values as real numbers but DISPLAYS them as Tibetan
+     digits. For Indian-style grouping use:
+     `[>=10000000][$-2000451]#\,##\,##\,##0;[>=100000][$-2000451]#\,##\,##0;[$-2000451]#,##0`
+  3. Set the cell font to TCRC Youtso Unicode so the digits look right.
+  (If your Excel version ignores the format and shows western digits,
+  use Ctrl+Alt+N on labels/headings instead — values stay calculable.)
+
 ## Files
 - `TCRC-Youtso-Unicode-fixed.ttf` — repaired Unicode font (419 broken glyph names fixed, OS/2 table modernized v0→v4, Tibetan Unicode range declared)
 - `TCRC-Tibetan-Unicode-Keyboard.ahk` — TCRC-layout Unicode keyboard

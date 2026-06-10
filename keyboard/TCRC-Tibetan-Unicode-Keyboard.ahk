@@ -165,6 +165,19 @@ $8:: Out(Chr(0x0F28))
 $9:: Out(Chr(0x0F29))
 $0:: Out(Chr(0x0F20))
 
+; ---------- numeric keypad (NumLock on) ----------
+$Numpad1:: Out(Chr(0x0F21))
+$Numpad2:: Out(Chr(0x0F22))
+$Numpad3:: Out(Chr(0x0F23))
+$Numpad4:: Out(Chr(0x0F24))
+$Numpad5:: Out(Chr(0x0F25))
+$Numpad6:: Out(Chr(0x0F26))
+$Numpad7:: Out(Chr(0x0F27))
+$Numpad8:: Out(Chr(0x0F28))
+$Numpad9:: Out(Chr(0x0F29))
+$Numpad0:: Out(Chr(0x0F20))
+$NumpadDot:: Out(".")
+
 ; ---------- punctuation & marks ----------
 $`::  Out(Chr(0x0F0C))                ; Tsheg-2 (non-breaking tsheg)
 $+`:: Out(Chr(0x0F09))                ; Chengo (yig mgo sgab ma) [verify]
@@ -764,4 +777,69 @@ ConvertWordDoc(word, doc, legacyFont) {
         report .= "`nWARNING: " sweepErrors " paragraph(s) could not be processed -`nplease check the document and report this."
     report .= "`n`nCheck the text, then save the document.`nThe text is now Unicode in TCRC Youtso Unicode`n(you can switch to Monlam or any Unicode Tibetan font)."
     MsgBox report, "TCRC Unicode Converter", "Iconi"
+}
+
+; ---- Ctrl+Alt+N: selected number -> Tibetan digits, Indian grouping ----
+; Example: select "900000" and press Ctrl+Alt+N -> it becomes Tibetan 9,00,000
+; (For Excel: keep real numbers in cells for math; use this on labels, or
+;  see the user guide for a cell format that displays Tibetan digits.)
+^!n:: {
+    saved := ClipboardAll()
+    A_Clipboard := ""
+    Send "^c"
+    if !ClipWait(1) {
+        TrayTip "TCRC Converter", "Nothing selected"
+        return
+    }
+    A_Clipboard := TibetanNumber(A_Clipboard)
+    Send "^v"
+    Sleep 300
+    A_Clipboard := saved
+}
+
+TibetanNumber(s) {
+    s := Trim(s, " `t`r`n")
+    isNegative := SubStr(s, 1, 1) = "-"
+    if isNegative
+        s := SubStr(s, 2)
+    s := StrReplace(s, ",")          ; remove any existing separators
+
+    ; split whole part and decimal part
+    dotPosition := InStr(s, ".")
+    if (dotPosition > 0) {
+        wholePart := SubStr(s, 1, dotPosition - 1)
+        decimalPart := SubStr(s, dotPosition + 1)
+    } else {
+        wholePart := s
+        decimalPart := ""
+    }
+
+    ; Indian grouping: last 3 digits, then groups of 2 (9,00,000)
+    grouped := ""
+    if (StrLen(wholePart) > 3) {
+        grouped := SubStr(wholePart, StrLen(wholePart) - 2)
+        rest := SubStr(wholePart, 1, StrLen(wholePart) - 3)
+        while (StrLen(rest) > 2) {
+            grouped := SubStr(rest, StrLen(rest) - 1) "," grouped
+            rest := SubStr(rest, 1, StrLen(rest) - 2)
+        }
+        grouped := rest "," grouped
+    } else {
+        grouped := wholePart
+    }
+
+    result := isNegative ? "-" : ""
+    result .= grouped
+    if (decimalPart != "")
+        result .= "." decimalPart
+
+    ; western digits -> Tibetan digits
+    tibetan := ""
+    loop parse result {
+        if (A_LoopField >= "0" && A_LoopField <= "9")
+            tibetan .= Chr(0x0F20 + Integer(A_LoopField))
+        else
+            tibetan .= A_LoopField
+    }
+    return tibetan
 }

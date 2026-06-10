@@ -577,7 +577,7 @@ CheckWord() {
         ; also catch legacy text that someone re-fonted to the NEW Unicode
         ; font: look for characters that only exist in legacy text
         if (found = "") {
-            for sigChar in ["ü", "Û", "ô", "Å", "¾", "º"] {
+            for sigChar in ["ü", "Û", "ô", "Å", "¾", "º", "¼", "½", "Ç", "¿"] {
                 rng := doc.Content.Duplicate
                 rng.Find.ClearFormatting()
                 rng.Find.Font.Name := "TCRC Youtso Unicode"

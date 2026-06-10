@@ -76,7 +76,7 @@ REPLACEMENT_FONT = "TCRC Youtso Unicode"
 # as Latin gibberish then). These characters appear in legacy Tibetan text
 # but almost never in real English text — if we see one in a run that uses
 # the new font, that run is legacy text too and needs converting.
-LEGACY_SIGNATURE_CHARACTERS = ["ü", "Û", "ô", "Å", "¾", "º", "Ç", "¿"]
+LEGACY_SIGNATURE_CHARACTERS = ["ü", "Û", "ô", "Å", "¾", "º", "Ç", "¿", "¼", "½"]
 
 
 # ---------------------------------------------------------------------------

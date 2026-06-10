@@ -34,57 +34,99 @@ import sys
 from fontTools.ttLib import TTFont
 
 
-def repair(source_path: str, target_path: str) -> None:
-    # ---- pass 1: read the font and decide every glyph's new name --------
-    font = TTFont(source_path)
+def decide_new_glyph_names(font):
+    """Work out a proper, unique name for every glyph in the font."""
+
     old_names = font.getGlyphOrder()
 
-    # which Unicode codepoint does each glyph display? (from the cmap)
+    # First, learn which Unicode character each glyph displays.
+    # The font's "cmap" table maps character -> glyph; we flip it around.
     glyph_to_unicode = {}
-    for codepoint, glyph_name in sorted(font.getBestCmap().items()):
-        glyph_to_unicode.setdefault(glyph_name, codepoint)
+    cmap = font.getBestCmap()
+    for codepoint, glyph_name in sorted(cmap.items()):
+        glyph_is_already_known = glyph_name in glyph_to_unicode
+        if not glyph_is_already_known:
+            glyph_to_unicode[glyph_name] = codepoint
 
-    new_names, taken = [], set()
-    for glyph_id, name in enumerate(old_names):
+    new_names = []
+    names_already_used = set()
+
+    for glyph_id, old_name in enumerate(old_names):
+
+        # The very first glyph (number 0) must always be called ".notdef".
         if glyph_id == 0:
-            new = ".notdef"                       # glyph 0 must keep this name
-        elif name.split("#")[0] == ".notdef":     # the 419 broken ones
-            codepoint = glyph_to_unicode.get(name)
-            new = f"uni{codepoint:04X}" if codepoint else f"glyph{glyph_id:05d}"
+            new_name = ".notdef"
+
+        # The broken glyphs: fontTools shows duplicated names as
+        # ".notdef#1", ".notdef#2" and so on. Give them real names.
+        elif old_name.split("#")[0] == ".notdef":
+            if old_name in glyph_to_unicode:
+                codepoint = glyph_to_unicode[old_name]
+                new_name = "uni%04X" % codepoint        # e.g. uni0F40
+            else:
+                new_name = "glyph%05d" % glyph_id       # e.g. glyph00598
+
+        # Healthy glyphs keep their name.
         else:
-            new = name.split("#")[0]
-        while new in taken:                       # names must be unique
-            new += ".alt"
-        taken.add(new)
-        new_names.append(new)
+            new_name = old_name.split("#")[0]
 
-    # ---- pass 2: open the font lazily and apply the changes -------------
-    # (lazy = tables we don't touch are copied through byte-for-byte,
-    #  which guarantees the typeface itself cannot be damaged)
+        # Names must be unique — add ".alt" until this one is.
+        while new_name in names_already_used:
+            new_name = new_name + ".alt"
+
+        names_already_used.add(new_name)
+        new_names.append(new_name)
+
+    return new_names
+
+
+def repair(source_path, target_path):
+
+    # ---- pass 1: read the font and decide every glyph's new name --------
+    font = TTFont(source_path)
+    new_names = decide_new_glyph_names(font)
+
+    # ---- pass 2: open the font again "lazily" and apply the changes -----
+    # Lazy means: tables we do not touch are copied through byte-for-byte,
+    # which guarantees the typeface itself cannot be damaged.
     font = TTFont(source_path, lazy=True)
-    post = font["post"]                # the table that stores glyph names
+
+    # The "post" table is where glyph names are stored.
+    post_table = font["post"]
     font.glyphOrder = new_names
-    if hasattr(post, "glyphOrder"):
-        post.glyphOrder = new_names
-    post.extraNames, post.mapping = [], {}
+    if hasattr(post_table, "glyphOrder"):
+        post_table.glyphOrder = new_names
+    post_table.extraNames = []
+    post_table.mapping = {}
 
-    os2 = font["OS/2"]
-    os2.version = 4
-    os2.ulUnicodeRange1 = (1 << 0) | (1 << 1) | (1 << 31)  # Latin + punctuation
-    os2.ulUnicodeRange2 = 1 << (70 - 64)                   # bit 70 = Tibetan
-    os2.ulUnicodeRange3 = 0
-    os2.ulUnicodeRange4 = 0
-    os2.ulCodePageRange1 = 1                               # Windows-1252
-    os2.ulCodePageRange2 = 0
-    os2.usDefaultChar, os2.usBreakChar, os2.usMaxContext = 0, 0x20, 8
-    os2.sxHeight = os2.sCapHeight = 0
-    os2.fsSelection |= 0x40                                # "regular" style
+    # The OS/2 table is the font's "ID card" for Windows.
+    os2_table = font["OS/2"]
+    os2_table.version = 4
+    # Declare which Unicode ranges the font covers (each range is one bit):
+    #   bit 0 = Basic Latin, bit 1 = Latin-1, bit 31 = General Punctuation
+    os2_table.ulUnicodeRange1 = (1 << 0) | (1 << 1) | (1 << 31)
+    #   bit 70 = Tibetan (bits 64-95 live in ulUnicodeRange2)
+    os2_table.ulUnicodeRange2 = 1 << (70 - 64)
+    os2_table.ulUnicodeRange3 = 0
+    os2_table.ulUnicodeRange4 = 0
+    # Declare the Windows-1252 codepage (bit 0).
+    os2_table.ulCodePageRange1 = 1
+    os2_table.ulCodePageRange2 = 0
+    # A few fields that exist only in newer OS/2 versions:
+    os2_table.usDefaultChar = 0
+    os2_table.usBreakChar = 0x20          # the space character
+    os2_table.usMaxContext = 8
+    os2_table.sxHeight = 0
+    os2_table.sCapHeight = 0
+    # Mark the font as a "regular" style (bit 6).
+    os2_table.fsSelection = os2_table.fsSelection | 0x40
 
+    # Bump the version so Windows sees this as an update.
     font["name"].setName("Version 1.10; modernized tables", 5, 3, 1, 0x409)
     font["head"].fontRevision = 1.10
 
     font.save(target_path)
-    print(f"repaired font written to {target_path}")
+    print("repaired font written to " + target_path)
 
 
 if __name__ == "__main__":

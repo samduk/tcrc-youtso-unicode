@@ -123,7 +123,7 @@ mapping. So `tools/build_mapping.py`:
 
 ## Credits
 
-- **Tibetan Computing Resource Centre (TCRC)** — creators of the original
+- **Tibetan Computer Resource Centre (TCRC)** — creators of the original
   Youtso typeface and keyboard (© 2000–2003). This project stands on their
   shoulders; the typeface remains their work and their copyright.
 - Revival, Unicode repair, converter, and packaging — **Samdup**.

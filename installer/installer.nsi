@@ -28,6 +28,8 @@ Section "Install"
   File "README.txt"
   File "tcrc_on.ico"
   File "tcrc_off.ico"
+  File "convert-docx.ps1"
+  File "tcrc_to_unicode_map.json"
 
   ; --- font ---
   SetOutPath "$FONTS"

@@ -628,12 +628,53 @@ ConvertHighCharsOnly(text) {
 
 ConvertWordDoc(word, doc, legacyFont) {
     global LegacyMap, LegacyFindText
+
+    ; ======== FAST MODE ========
+    ; Convert the saved .docx file directly with the bundled PowerShell
+    ; script - this takes seconds even for hundreds of pages. The result
+    ; is saved as "name (Unicode).docx"; the original is never modified.
+    fullPath := ""
+    try fullPath := doc.FullName
+    ps1 := A_ScriptDir "\convert-docx.ps1"
+    if (fullPath != "" && FileExist(fullPath) && FileExist(ps1)
+        && StrLower(SubStr(fullPath, -5)) = ".docx") {
+        converted := ""
+        try {
+            doc.Save()
+            doc.Close(0)
+            RunWait('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' ps1 '" -Path "' fullPath '"', , "Hide")
+            SplitPath fullPath, , &folder, , &nameOnly
+            converted := folder "\" nameOnly " (Unicode).docx"
+        }
+        if (converted != "" && FileExist(converted)) {
+            try word.Documents.Open(converted)
+            MsgBox "Conversion finished (fast mode).`n`nSaved as:`n" converted "`n`nYour original file was not changed.", "TCRC Unicode Converter", "Iconi"
+            return
+        }
+        ; fast mode failed -> reopen the original, continue with slow mode
+        try {
+            word.Documents.Open(fullPath)
+            doc := word.ActiveDocument
+        } catch {
+            MsgBox "Could not reopen the document after a failed conversion attempt.`nPlease reopen it manually and try again.", "TCRC Unicode Converter", "Iconx"
+            return
+        }
+    }
+
+    ; ======== SLOW MODE (in-Word; preserves all formatting) ========
     word.ScreenUpdating := false
+
+    ; read the whole text once so characters that do not occur in this
+    ; document can be skipped entirely (a big speed win)
+    allText := ""
+    try allText := doc.Content.Text
 
     ; ---- pass 1: find & replace, character by character ----
     ; (this preserves bold/size/etc. formatting inside paragraphs)
     ; Each character gets its own try, so one failure cannot stop the rest.
     for ch, rep in LegacyMap {
+        if (allText != "" && !InStr(allText, ch, true))
+            continue
         try {
             f := doc.Content.Find
             f.ClearFormatting()
@@ -662,21 +703,30 @@ ConvertWordDoc(word, doc, legacyFont) {
     swept := 0
     sweepErrors := 0
     totalParagraphs := 0
-    try totalParagraphs := doc.Paragraphs.Count
+    remaining := ""
+    try remaining := doc.Content.Text
+    if (remaining = "" || HasHighLegacyChars(remaining)) {
+        try totalParagraphs := doc.Paragraphs.Count
+    }
     Loop totalParagraphs {
         try {
             para := doc.Paragraphs.Item(A_Index)
             {
                 rng := para.Range.Duplicate
+                text := rng.Text
                 ; leave the paragraph mark / table-cell mark out of the range
-                while (rng.End > rng.Start) {
-                    lastChar := SubStr(rng.Text, -1)
+                trailing := 0
+                while (trailing < StrLen(text)) {
+                    lastChar := SubStr(text, StrLen(text) - trailing, 1)
                     if (lastChar = "`r" || lastChar = Chr(7))
-                        rng.MoveEnd(1, -1)   ; 1 = wdCharacter
+                        trailing += 1
                     else
                         break
                 }
-                text := rng.Text
+                if (trailing > 0) {
+                    rng.MoveEnd(1, -trailing)   ; 1 = wdCharacter
+                    text := SubStr(text, 1, StrLen(text) - trailing)
+                }
                 if (text = "" || !HasHighLegacyChars(text))
                     continue
                 converted := ConvertHighCharsOnly(text)

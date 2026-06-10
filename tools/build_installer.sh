@@ -12,6 +12,7 @@ cp installer/installer.nsi installer/tcrc_on.ico installer/tcrc_off.ico "$STAGE/
 cp fonts/TCRC-Youtso-Unicode-fixed.ttf "$STAGE/"
 cp keyboard/TCRC-Tibetan-Unicode-Keyboard.ahk "$STAGE/"
 cp docs/user-guide.md "$STAGE/README.txt"
+cp converter/convert-docx.ps1 converter/tcrc_to_unicode_map.json "$STAGE/"
 
 # fetch the AutoHotkey v2 runtime that gets bundled inside the installer
 AHK_URL=https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.19/AutoHotkey_2.0.19.zip

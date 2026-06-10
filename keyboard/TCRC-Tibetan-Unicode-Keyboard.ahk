@@ -404,6 +404,122 @@ LegacyMap[Chr(8249)] := Chr(0x0F74)
 LegacyMap[Chr(8250)] := Chr(0x0F9C)
 LegacyMap[Chr(8482)] := Chr(0x0F53)
 
+; Word's find box mishandles some non-ASCII characters typed directly,
+; but always accepts "^0" + the character's Windows-1252 code.
+global LegacyFindText := Map()
+LegacyFindText[Chr(160)] := "^0160"
+LegacyFindText[Chr(161)] := "^0161"
+LegacyFindText[Chr(162)] := "^0162"
+LegacyFindText[Chr(163)] := "^0163"
+LegacyFindText[Chr(164)] := "^0164"
+LegacyFindText[Chr(165)] := "^0165"
+LegacyFindText[Chr(167)] := "^0167"
+LegacyFindText[Chr(168)] := "^0168"
+LegacyFindText[Chr(169)] := "^0169"
+LegacyFindText[Chr(170)] := "^0170"
+LegacyFindText[Chr(171)] := "^0171"
+LegacyFindText[Chr(172)] := "^0172"
+LegacyFindText[Chr(174)] := "^0174"
+LegacyFindText[Chr(175)] := "^0175"
+LegacyFindText[Chr(176)] := "^0176"
+LegacyFindText[Chr(177)] := "^0177"
+LegacyFindText[Chr(178)] := "^0178"
+LegacyFindText[Chr(179)] := "^0179"
+LegacyFindText[Chr(180)] := "^0180"
+LegacyFindText[Chr(181)] := "^0181"
+LegacyFindText[Chr(182)] := "^0182"
+LegacyFindText[Chr(184)] := "^0184"
+LegacyFindText[Chr(185)] := "^0185"
+LegacyFindText[Chr(186)] := "^0186"
+LegacyFindText[Chr(187)] := "^0187"
+LegacyFindText[Chr(188)] := "^0188"
+LegacyFindText[Chr(189)] := "^0189"
+LegacyFindText[Chr(190)] := "^0190"
+LegacyFindText[Chr(191)] := "^0191"
+LegacyFindText[Chr(192)] := "^0192"
+LegacyFindText[Chr(193)] := "^0193"
+LegacyFindText[Chr(194)] := "^0194"
+LegacyFindText[Chr(195)] := "^0195"
+LegacyFindText[Chr(196)] := "^0196"
+LegacyFindText[Chr(197)] := "^0197"
+LegacyFindText[Chr(198)] := "^0198"
+LegacyFindText[Chr(199)] := "^0199"
+LegacyFindText[Chr(200)] := "^0200"
+LegacyFindText[Chr(201)] := "^0201"
+LegacyFindText[Chr(203)] := "^0203"
+LegacyFindText[Chr(204)] := "^0204"
+LegacyFindText[Chr(205)] := "^0205"
+LegacyFindText[Chr(206)] := "^0206"
+LegacyFindText[Chr(207)] := "^0207"
+LegacyFindText[Chr(208)] := "^0208"
+LegacyFindText[Chr(209)] := "^0209"
+LegacyFindText[Chr(210)] := "^0210"
+LegacyFindText[Chr(211)] := "^0211"
+LegacyFindText[Chr(212)] := "^0212"
+LegacyFindText[Chr(213)] := "^0213"
+LegacyFindText[Chr(214)] := "^0214"
+LegacyFindText[Chr(215)] := "^0215"
+LegacyFindText[Chr(216)] := "^0216"
+LegacyFindText[Chr(217)] := "^0217"
+LegacyFindText[Chr(218)] := "^0218"
+LegacyFindText[Chr(219)] := "^0219"
+LegacyFindText[Chr(220)] := "^0220"
+LegacyFindText[Chr(221)] := "^0221"
+LegacyFindText[Chr(222)] := "^0222"
+LegacyFindText[Chr(223)] := "^0223"
+LegacyFindText[Chr(224)] := "^0224"
+LegacyFindText[Chr(225)] := "^0225"
+LegacyFindText[Chr(226)] := "^0226"
+LegacyFindText[Chr(227)] := "^0227"
+LegacyFindText[Chr(228)] := "^0228"
+LegacyFindText[Chr(229)] := "^0229"
+LegacyFindText[Chr(230)] := "^0230"
+LegacyFindText[Chr(231)] := "^0231"
+LegacyFindText[Chr(232)] := "^0232"
+LegacyFindText[Chr(233)] := "^0233"
+LegacyFindText[Chr(234)] := "^0234"
+LegacyFindText[Chr(235)] := "^0235"
+LegacyFindText[Chr(236)] := "^0236"
+LegacyFindText[Chr(237)] := "^0237"
+LegacyFindText[Chr(238)] := "^0238"
+LegacyFindText[Chr(239)] := "^0239"
+LegacyFindText[Chr(240)] := "^0240"
+LegacyFindText[Chr(241)] := "^0241"
+LegacyFindText[Chr(242)] := "^0242"
+LegacyFindText[Chr(243)] := "^0243"
+LegacyFindText[Chr(244)] := "^0244"
+LegacyFindText[Chr(245)] := "^0245"
+LegacyFindText[Chr(246)] := "^0246"
+LegacyFindText[Chr(247)] := "^0247"
+LegacyFindText[Chr(248)] := "^0248"
+LegacyFindText[Chr(249)] := "^0249"
+LegacyFindText[Chr(250)] := "^0250"
+LegacyFindText[Chr(251)] := "^0251"
+LegacyFindText[Chr(252)] := "^0252"
+LegacyFindText[Chr(253)] := "^0253"
+LegacyFindText[Chr(254)] := "^0254"
+LegacyFindText[Chr(255)] := "^0255"
+LegacyFindText[Chr(339)] := "^0156"
+LegacyFindText[Chr(352)] := "^0138"
+LegacyFindText[Chr(353)] := "^0154"
+LegacyFindText[Chr(376)] := "^0159"
+LegacyFindText[Chr(402)] := "^0131"
+LegacyFindText[Chr(710)] := "^0136"
+LegacyFindText[Chr(732)] := "^0152"
+LegacyFindText[Chr(8211)] := "^0150"
+LegacyFindText[Chr(8212)] := "^0151"
+LegacyFindText[Chr(8216)] := "^0145"
+LegacyFindText[Chr(8217)] := "^0146"
+LegacyFindText[Chr(8218)] := "^0130"
+LegacyFindText[Chr(8222)] := "^0132"
+LegacyFindText[Chr(8224)] := "^0134"
+LegacyFindText[Chr(8225)] := "^0135"
+LegacyFindText[Chr(8226)] := "^0149"
+LegacyFindText[Chr(8230)] := "^0133"
+LegacyFindText[Chr(8240)] := "^0137"
+LegacyFindText[Chr(8249)] := "^0139"
+LegacyFindText[Chr(8250)] := "^0155"
+LegacyFindText[Chr(8482)] := "^0153"
 global LegacyFonts := ["TCRC Bod-Yig", "TCRC Youtsoweb", "TCRC Youtso"]
 global PromptedDocs := Map()
 
@@ -511,7 +627,7 @@ ConvertHighCharsOnly(text) {
 }
 
 ConvertWordDoc(word, doc, legacyFont) {
-    global LegacyMap
+    global LegacyMap, LegacyFindText
     word.ScreenUpdating := false
 
     ; ---- pass 1: find & replace, character by character ----
@@ -523,7 +639,12 @@ ConvertWordDoc(word, doc, legacyFont) {
             f.ClearFormatting()
             f.Replacement.ClearFormatting()
             f.Font.Name := legacyFont
-            f.Text := (ch = "^") ? "^^" : ch
+            if LegacyFindText.Has(ch)
+                f.Text := LegacyFindText[ch]
+            else if (ch = "^")
+                f.Text := "^^"
+            else
+                f.Text := ch
             f.Replacement.Text := rep
             f.Replacement.Font.Name := "TCRC Youtso Unicode"
             f.Forward := true
@@ -539,9 +660,13 @@ ConvertWordDoc(word, doc, legacyFont) {
     ; Some characters do not survive Word's find & replace. Any paragraph
     ; that still contains non-ASCII legacy characters is converted directly.
     swept := 0
-    try {
-        for para in doc.Paragraphs {
-            try {
+    sweepErrors := 0
+    totalParagraphs := 0
+    try totalParagraphs := doc.Paragraphs.Count
+    Loop totalParagraphs {
+        try {
+            para := doc.Paragraphs.Item(A_Index)
+            {
                 rng := para.Range.Duplicate
                 ; leave the paragraph mark / table-cell mark out of the range
                 while (rng.End > rng.Start) {
@@ -560,6 +685,8 @@ ConvertWordDoc(word, doc, legacyFont) {
                     swept += 1
                 }
             }
+        } catch {
+            sweepErrors += 1
         }
     }
 
@@ -580,5 +707,11 @@ ConvertWordDoc(word, doc, legacyFont) {
     }
 
     word.ScreenUpdating := true
-    MsgBox "Conversion finished.`n`nCheck the text, then save the document.`nThe text is now Unicode in TCRC Youtso Unicode`n(you can switch to Monlam or any Unicode Tibetan font).", "TCRC Unicode Converter", "Iconi"
+    report := "Conversion finished."
+    if (swept > 0)
+        report .= "`n(" swept " paragraph(s) needed the deep-sweep pass.)"
+    if (sweepErrors > 0)
+        report .= "`nWARNING: " sweepErrors " paragraph(s) could not be processed -`nplease check the document and report this."
+    report .= "`n`nCheck the text, then save the document.`nThe text is now Unicode in TCRC Youtso Unicode`n(you can switch to Monlam or any Unicode Tibetan font)."
+    MsgBox report, "TCRC Unicode Converter", "Iconi"
 }

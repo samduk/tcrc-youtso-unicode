@@ -16,6 +16,7 @@ Page directory
 Page instfiles
 
 Section "Install"
+  SetShellVarContext all
   ; stop a running copy of the keyboard so files can be replaced
   nsExec::ExecToStack 'taskkill /F /IM AutoHotkey64.exe'
   Pop $0
@@ -48,7 +49,10 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\${APPNAME}\Uninstall.lnk" "$INSTDIR\uninstall.exe"
   WriteINIStr "$SMPROGRAMS\${APPNAME}\Support Samdup - Buy Me a Coffee.url" "InternetShortcut" "URL" "https://buymeacoffee.com/samchoe2002"
 
-  ; --- start keyboard automatically at login ---
+  ; --- start keyboard automatically at login (two mechanisms,
+  ;     the app's #SingleInstance makes a double start harmless) ---
+  CreateShortcut "$SMSTARTUP\TCRC Tibetan Keyboard.lnk" "$INSTDIR\AutoHotkey64.exe" '"$INSTDIR\TCRC-Tibetan-Unicode-Keyboard.ahk"' "$INSTDIR\tcrc_on.ico"
+
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "TCRCTibetanKeyboard" '"$INSTDIR\AutoHotkey64.exe" "$INSTDIR\TCRC-Tibetan-Unicode-Keyboard.ahk"'
 
   ; --- uninstaller ---
@@ -65,6 +69,7 @@ Section "Install"
 SectionEnd
 
 Section "Uninstall"
+  SetShellVarContext all
   ; stop the running keyboard app
   nsExec::ExecToStack 'taskkill /F /IM AutoHotkey64.exe'
   Pop $0
@@ -72,6 +77,7 @@ Section "Uninstall"
 
   ; autostart entry
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "TCRCTibetanKeyboard"
+  Delete "$SMSTARTUP\TCRC Tibetan Keyboard.lnk"
 
   ; font: registration, substitution, file (at reboot if currently in use)
   DeleteRegValue HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" "TCRC Youtso Unicode (TrueType)"

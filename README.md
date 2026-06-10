@@ -1,4 +1,4 @@
-# TCRC Youtso Unicode — ཡུ་མཚོ།
+# TCRC Youtso Unicode — གཡུ་མཚོ།
 
 **A complete revival of the beloved TCRC Youtso Tibetan font for the modern computer: Unicode font + familiar TCRC keyboard + automatic conversion of old documents + one-click Windows installer.**
 

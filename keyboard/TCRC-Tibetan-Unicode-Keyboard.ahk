@@ -560,6 +560,42 @@ ConvertString(s) {
 }
 
 ; ---- Word: watch for opened legacy documents ----
+DetectLegacyText(doc) {
+    global LegacyFonts, LegacyFindText
+    ; 1) any text still using one of the old legacy font names?
+    for f in LegacyFonts {
+        try {
+            rng := doc.Content.Duplicate
+            rng.Find.ClearFormatting()
+            rng.Find.Font.Name := f
+            rng.Find.Text := ""
+            rng.Find.Forward := true
+            rng.Find.Wrap := 0
+            rng.Find.Format := true        ; search by formatting (the font)
+            if rng.Find.Execute()
+                return f
+        }
+    }
+    ; 2) legacy characters hiding inside text marked with the NEW font
+    ;    (searched by ^0 character code - Word mishandles some of these
+    ;     characters, like the fraction signs, as literal search text)
+    for sigChar in ["ü", "Û", "ô", "Å", "¾", "º", "¼", "½", "Ç", "¿"] {
+        try {
+            rng := doc.Content.Duplicate
+            rng.Find.ClearFormatting()
+            rng.Find.Font.Name := "TCRC Youtso Unicode"
+            rng.Find.Text := LegacyFindText.Has(sigChar) ? LegacyFindText[sigChar] : sigChar
+            rng.Find.Forward := true
+            rng.Find.Wrap := 0
+            rng.Find.Format := true
+            rng.Find.MatchCase := true
+            if rng.Find.Execute()
+                return "TCRC Youtso Unicode"
+        }
+    }
+    return ""
+}
+
 SetTimer CheckWord, 3000
 CheckWord() {
     global PromptedDocs, LegacyFonts
@@ -573,38 +609,7 @@ CheckWord() {
         key := doc.FullName
         if PromptedDocs.Has(key)
             return
-        found := ""
-        for f in LegacyFonts {
-            rng := doc.Content.Duplicate
-            rng.Find.ClearFormatting()
-            rng.Find.Font.Name := f
-            rng.Find.Text := ""
-            rng.Find.Forward := true
-            rng.Find.Wrap := 0
-            rng.Find.Format := true        ; search by formatting (the font)
-            if rng.Find.Execute() {
-                found := f
-                break
-            }
-        }
-        ; also catch legacy text that someone re-fonted to the NEW Unicode
-        ; font: look for characters that only exist in legacy text
-        if (found = "") {
-            for sigChar in ["ü", "Û", "ô", "Å", "¾", "º", "¼", "½", "Ç", "¿"] {
-                rng := doc.Content.Duplicate
-                rng.Find.ClearFormatting()
-                rng.Find.Font.Name := "TCRC Youtso Unicode"
-                rng.Find.Text := sigChar
-                rng.Find.Forward := true
-                rng.Find.Wrap := 0
-                rng.Find.Format := true
-                rng.Find.MatchCase := true
-                if rng.Find.Execute() {
-                    found := "TCRC Youtso Unicode"
-                    break
-                }
-            }
-        }
+        found := DetectLegacyText(doc)
         PromptedDocs[key] := true
         if (found = "")
             return
@@ -842,4 +847,29 @@ TibetanNumber(s) {
             tibetan .= A_LoopField
     }
     return tibetan
+}
+
+; ---- Ctrl+Alt+D: convert the active Word document right now ----
+; Use this if the automatic prompt did not appear.
+^!d:: {
+    global PromptedDocs
+    if !WinActive("ahk_exe WINWORD.EXE") {
+        TrayTip "TCRC Converter", "Switch to the Word document first, then press Ctrl+Alt+D"
+        return
+    }
+    try word := ComObjActive("Word.Application")
+    catch {
+        TrayTip "TCRC Converter", "Could not reach Word"
+        return
+    }
+    try {
+        doc := word.ActiveDocument
+        try PromptedDocs.Delete(doc.FullName)
+        found := DetectLegacyText(doc)
+        if (found = "") {
+            MsgBox "No legacy TCRC text found in this document.", "TCRC Unicode Converter", "Iconi"
+            return
+        }
+        ConvertWordDoc(word, doc, found)
+    }
 }

@@ -67,9 +67,16 @@ CONVERSION_TABLE = load_conversion_table()
 # TCRC legacy font name, just add it to this list.
 LEGACY_FONT_NAMES = ["TCRC Bod-Yig", "TCRC Youtsoweb", "TCRC Youtso"]
 
-# Every Windows computer has this Unicode Tibetan font built in,
-# so converted documents display correctly everywhere.
-REPLACEMENT_FONT = "Microsoft Himalaya"
+# Converted text is set to this font (install it with the project's
+# installer). It displays fine in any Unicode Tibetan font — Microsoft
+# Himalaya, Monlam — because the text itself is standard Unicode now.
+REPLACEMENT_FONT = "TCRC Youtso Unicode"
+
+# Sometimes people re-fonted legacy text to the NEW Unicode font (it shows
+# as Latin gibberish then). These characters appear in legacy Tibetan text
+# but almost never in real English text — if we see one in a run that uses
+# the new font, that run is legacy text too and needs converting.
+LEGACY_SIGNATURE_CHARACTERS = ["ü", "Û", "ô", "Å", "¾", "º", "Ç", "¿"]
 
 
 # ---------------------------------------------------------------------------
@@ -116,10 +123,20 @@ TEXT_PATTERN = re.compile(r"(<w:t(?:\s[^>]*)?>)(.*?)(</w:t>)", re.DOTALL)
 
 
 def run_uses_legacy_font(run_xml):
-    """Does this run use one of the old TCRC fonts?"""
+    """Does this run contain legacy TCRC text that needs converting?"""
+
+    # Case 1: the run uses one of the old TCRC font names.
     for font_name in LEGACY_FONT_NAMES:
         if font_name in run_xml:
             return True
+
+    # Case 2: the run uses the NEW Unicode font, but the text inside is
+    # still legacy codes (someone changed the font without converting).
+    if REPLACEMENT_FONT in run_xml:
+        for signature_character in LEGACY_SIGNATURE_CHARACTERS:
+            if signature_character in run_xml:
+                return True
+
     return False
 
 
@@ -165,8 +182,13 @@ def convert_docx(source_path):
         document_xml = "".join(converted_pieces)
 
         # The text is Unicode now — also change the font name everywhere.
+        # Font names appear in the XML inside quotes, like w:ascii="TCRC Youtso".
+        # We include the quotes in the search, otherwise "TCRC Youtso" would
+        # also wrongly match inside the name "TCRC Youtso Unicode".
         for font_name in LEGACY_FONT_NAMES:
-            document_xml = document_xml.replace(font_name, REPLACEMENT_FONT)
+            old_attribute = '"' + font_name + '"'
+            new_attribute = '"' + REPLACEMENT_FONT + '"'
+            document_xml = document_xml.replace(old_attribute, new_attribute)
 
         # --- write the new .docx ------------------------------------------
         # Copy every file from the original zip; swap in our two changed
@@ -180,7 +202,9 @@ def convert_docx(source_path):
                 elif file_name == "word/styles.xml":
                     styles_xml = source_zip.read(file_name).decode("utf-8")
                     for font_name in LEGACY_FONT_NAMES:
-                        styles_xml = styles_xml.replace(font_name, REPLACEMENT_FONT)
+                        old_attribute = '"' + font_name + '"'
+                        new_attribute = '"' + REPLACEMENT_FONT + '"'
+                        styles_xml = styles_xml.replace(old_attribute, new_attribute)
                     target_zip.writestr(file_name, styles_xml)
 
                 else:

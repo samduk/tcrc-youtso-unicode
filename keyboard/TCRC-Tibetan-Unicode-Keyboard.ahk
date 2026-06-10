@@ -28,7 +28,7 @@ global LastChar := ""
 global IconOn := A_ScriptDir "\tcrc_on.ico"
 global IconOff := A_ScriptDir "\tcrc_off.ico"
 if FileExist(IconOn)
-    TraySetIcon(IconOn)
+    TraySetIcon(IconOn, , true)   ; true = freeze, so the icon never reverts
 A_IconTip := "TCRC Tibetan Unicode (Ctrl+Alt+T)"
 
 TrayTip "TCRC Tibetan Unicode keyboard", "Tibetan mode ON  (Ctrl+Alt+T to toggle)"
@@ -452,15 +452,34 @@ CheckWord() {
             rng.Find.Text := ""
             rng.Find.Forward := true
             rng.Find.Wrap := 0
+            rng.Find.Format := true        ; search by formatting (the font)
             if rng.Find.Execute() {
                 found := f
                 break
             }
         }
+        ; also catch legacy text that someone re-fonted to the NEW Unicode
+        ; font: look for characters that only exist in legacy text
+        if (found = "") {
+            for sigChar in ["ü", "Û", "ô", "Å", "¾", "º"] {
+                rng := doc.Content.Duplicate
+                rng.Find.ClearFormatting()
+                rng.Find.Font.Name := "TCRC Youtso Unicode"
+                rng.Find.Text := sigChar
+                rng.Find.Forward := true
+                rng.Find.Wrap := 0
+                rng.Find.Format := true
+                rng.Find.MatchCase := true
+                if rng.Find.Execute() {
+                    found := "TCRC Youtso Unicode"
+                    break
+                }
+            }
+        }
         PromptedDocs[key] := true
         if (found = "")
             return
-        r := MsgBox("This document contains legacy '" found "' text.`n`nConvert it to Unicode now?`n(The text will display in Microsoft Himalaya / any Unicode Tibetan font.)", "TCRC Unicode Converter", "YesNo Iconi")
+        r := MsgBox("This document contains legacy '" found "' text.`n`nConvert it to Unicode now?`n(The text will display in TCRC Youtso Unicode.)", "TCRC Unicode Converter", "YesNo Iconi")
         if (r = "Yes")
             ConvertWordDoc(word, doc, found)
     }
@@ -477,7 +496,7 @@ ConvertWordDoc(word, doc, legacyFont) {
             f.Font.Name := legacyFont
             f.Text := (ch = "^") ? "^^" : ch
             f.Replacement.Text := rep
-            f.Replacement.Font.Name := "Microsoft Himalaya"
+            f.Replacement.Font.Name := "TCRC Youtso Unicode"
             f.Forward := true
             f.Wrap := 1            ; wdFindContinue
             f.Format := true
@@ -487,16 +506,18 @@ ConvertWordDoc(word, doc, legacyFont) {
         }
         ; final pass: any leftover characters still in the legacy font
         ; (spaces etc.) -> just switch their font
-        f := doc.Content.Find
-        f.ClearFormatting()
-        f.Replacement.ClearFormatting()
-        f.Font.Name := legacyFont
-        f.Text := ""
-        f.Replacement.Text := ""
-        f.Replacement.Font.Name := "Microsoft Himalaya"
-        f.Format := true
-        f.Execute(,,,,,,,,, , 2)
+        if (legacyFont != "TCRC Youtso Unicode") {
+            f := doc.Content.Find
+            f.ClearFormatting()
+            f.Replacement.ClearFormatting()
+            f.Font.Name := legacyFont
+            f.Text := ""
+            f.Replacement.Text := ""
+            f.Replacement.Font.Name := "TCRC Youtso Unicode"
+            f.Format := true
+            f.Execute(,,,,,,,,, , 2)
+        }
     }
     word.ScreenUpdating := true
-    MsgBox "Conversion finished.`n`nCheck the text, then save the document.`nTip: you can now switch the font to Monlam or TCRC Youtso Unicode.", "TCRC Unicode Converter", "Iconi"
+    MsgBox "Conversion finished.`n`nCheck the text, then save the document.`nThe text is now Unicode in TCRC Youtso Unicode`n(you can switch to Monlam or any Unicode Tibetan font).", "TCRC Unicode Converter", "Iconi"
 }

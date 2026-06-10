@@ -72,13 +72,6 @@ LEGACY_FONT_NAMES = ["TCRC Bod-Yig", "TCRC Youtsoweb", "TCRC Youtso"]
 # Himalaya, Monlam — because the text itself is standard Unicode now.
 REPLACEMENT_FONT = "TCRC Youtso Unicode"
 
-# Sometimes people re-fonted legacy text to the NEW Unicode font (it shows
-# as Latin gibberish then). These characters appear in legacy Tibetan text
-# but almost never in real English text — if we see one in a run that uses
-# the new font, that run is legacy text too and needs converting.
-LEGACY_SIGNATURE_CHARACTERS = ["ü", "Û", "ô", "Å", "¾", "º", "Ç", "¿", "¼", "½"]
-
-
 # ---------------------------------------------------------------------------
 # STEP 2: converting text, one character at a time.
 # ---------------------------------------------------------------------------
@@ -121,21 +114,40 @@ RUN_PATTERN = re.compile(r"(<w:r\b[^>]*>.*?</w:r>)", re.DOTALL)
 # It captures three parts: the opening tag, the text, the closing tag.
 TEXT_PATTERN = re.compile(r"(<w:t(?:\s[^>]*)?>)(.*?)(</w:t>)", re.DOTALL)
 
+STORY_PART_PATTERN = re.compile(
+    r"word/(?:"
+    r"document|"
+    r"header\d+|"
+    r"footer\d+|"
+    r"footnotes|"
+    r"endnotes|"
+    r"comments(?:Extended|Extensible)?"
+    r")\.xml$",
+    re.IGNORECASE,
+)
+
 
 def run_uses_legacy_font(run_xml):
     """Does this run contain legacy TCRC text that needs converting?"""
 
     # Case 1: the run uses one of the old TCRC font names.
     for font_name in LEGACY_FONT_NAMES:
-        if font_name in run_xml:
+        # Include the quotes so "TCRC Youtso" does not also match inside
+        # the newer font name "TCRC Youtso Unicode".
+        if ('"' + font_name + '"') in run_xml:
             return True
 
-    # Case 2: the run uses the NEW Unicode font, but the text inside is
-    # still legacy codes (someone changed the font without converting).
+    # Case 2: the run uses the NEW Unicode font, but still contains any
+    # non-ASCII character from the legacy mapping. Checking the complete
+    # table catches partially converted files whose only leftover is a
+    # rarer Windows-1252 character such as ¼, ƒ, „, ‰, ˆ, —, or Ÿ.
     if REPLACEMENT_FONT in run_xml:
-        for signature_character in LEGACY_SIGNATURE_CHARACTERS:
-            if signature_character in run_xml:
-                return True
+        for text_match in TEXT_PATTERN.finditer(run_xml):
+            plain_text = html.unescape(text_match.group(2))
+            for character in plain_text:
+                character_code = ord(character)
+                if character_code >= 0x80 and character_code in CONVERSION_TABLE:
+                    return True
 
     return False
 
@@ -155,6 +167,27 @@ def convert_text_inside_run(match):
     return opening_tag + safe_text + closing_tag
 
 
+def convert_story_xml(story_xml):
+    """Convert runs and font names in one Word text-bearing XML part."""
+    pieces = re.split(RUN_PATTERN, story_xml)
+
+    converted_pieces = []
+    for piece in pieces:
+        is_a_run = piece.startswith("<w:r")
+        if is_a_run and run_uses_legacy_font(piece):
+            converted_piece = TEXT_PATTERN.sub(convert_text_inside_run, piece)
+            converted_pieces.append(converted_piece)
+        else:
+            converted_pieces.append(piece)
+
+    converted_xml = "".join(converted_pieces)
+    for font_name in LEGACY_FONT_NAMES:
+        old_attribute = '"' + font_name + '"'
+        new_attribute = '"' + REPLACEMENT_FONT + '"'
+        converted_xml = converted_xml.replace(old_attribute, new_attribute)
+    return converted_xml
+
+
 def convert_docx(source_path):
     """Convert one .docx file. Returns the path of the new file."""
     new_name = source_path.stem + " (Unicode)" + source_path.suffix
@@ -162,42 +195,16 @@ def convert_docx(source_path):
 
     with zipfile.ZipFile(source_path) as source_zip:
 
-        # --- read and convert the main document XML -----------------------
-        document_xml = source_zip.read("word/document.xml").decode("utf-8")
-
-        # Split the XML into pieces: runs and everything between runs.
-        # (Because RUN_PATTERN has capturing parentheses, re.split keeps
-        #  the runs in the result instead of throwing them away.)
-        pieces = re.split(RUN_PATTERN, document_xml)
-
-        converted_pieces = []
-        for piece in pieces:
-            is_a_run = piece.startswith("<w:r")
-            if is_a_run and run_uses_legacy_font(piece):
-                converted_piece = TEXT_PATTERN.sub(convert_text_inside_run, piece)
-                converted_pieces.append(converted_piece)
-            else:
-                converted_pieces.append(piece)
-
-        document_xml = "".join(converted_pieces)
-
-        # The text is Unicode now — also change the font name everywhere.
-        # Font names appear in the XML inside quotes, like w:ascii="TCRC Youtso".
-        # We include the quotes in the search, otherwise "TCRC Youtso" would
-        # also wrongly match inside the name "TCRC Youtso Unicode".
-        for font_name in LEGACY_FONT_NAMES:
-            old_attribute = '"' + font_name + '"'
-            new_attribute = '"' + REPLACEMENT_FONT + '"'
-            document_xml = document_xml.replace(old_attribute, new_attribute)
-
         # --- write the new .docx ------------------------------------------
-        # Copy every file from the original zip; swap in our two changed
-        # XML files along the way.
+        # Copy every file from the original zip. Convert every Word story,
+        # including headers, footers, notes, comments, and text boxes (text
+        # boxes live inside document/header/footer XML).
         with zipfile.ZipFile(target_path, "w", zipfile.ZIP_DEFLATED) as target_zip:
             for file_name in source_zip.namelist():
 
-                if file_name == "word/document.xml":
-                    target_zip.writestr(file_name, document_xml)
+                if STORY_PART_PATTERN.fullmatch(file_name):
+                    story_xml = source_zip.read(file_name).decode("utf-8")
+                    target_zip.writestr(file_name, convert_story_xml(story_xml))
 
                 elif file_name == "word/styles.xml":
                     styles_xml = source_zip.read(file_name).decode("utf-8")

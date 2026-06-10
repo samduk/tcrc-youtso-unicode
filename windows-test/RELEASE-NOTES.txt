@@ -1,0 +1,31 @@
+TCRC Youtso Unicode 1.2.0
+=========================
+
+User experience
+---------------
+- One installer provides the font, keyboard, converter, and uninstaller.
+- A visible TCRC Document Converter shortcut is installed on the desktop.
+- Users choose or drag a .doc or .docx file and click Convert to Unicode.
+- The converter creates a new (Unicode).docx file and preserves the original.
+- Word-file right-click commands open the same visible converter.
+- Ctrl+Alt+N prepares selected Excel cells for Tibetan-looking numbers.
+- Excel stores real numeric values, so SUM and arithmetic continue to work.
+
+Reliability and safety
+----------------------
+- The keyboard now handles keyboard input only.
+- Background Microsoft Word monitoring and COM attachment were removed.
+- Number handling is limited to the explicit Microsoft Excel workflow.
+- The installer no longer replaces Microsoft Himalaya globally.
+- Old font-substitution settings created by earlier releases are removed or
+  restored during upgrade.
+- Installer staging is recreated on every build to prevent stale files.
+- The AutoHotkey runtime download is pinned and checksum-verified.
+- Product-specific process names avoid stopping unrelated AutoHotkey scripts.
+
+Verification
+------------
+- Python and PowerShell converters produce matching Word XML.
+- The supplied legacy document matches the verified Unicode reference.
+- Windows tests cover installation, shortcuts, registry integration,
+  conversion, source preservation, Microsoft Word, and Excel calculation.

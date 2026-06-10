@@ -10,7 +10,9 @@
 
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Path
+    [string]$Path,
+
+    [string]$OutputPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,8 +32,6 @@ foreach ($property in $json.PSObject.Properties) {
 
 $legacyFonts = @("TCRC Bod-Yig", "TCRC Youtsoweb", "TCRC Youtso")
 $replacementFont = "TCRC Youtso Unicode"
-# characters that appear in legacy Tibetan text but almost never in English
-$signatureChars = @("ü", "Û", "ô", "Å", "¾", "º", "Ç", "¿", "¼", "½")
 
 # ---------------------------------------------------------------------------
 # Helper functions.
@@ -52,12 +52,21 @@ function Convert-LegacyText([string]$text) {
 
 function Test-RunNeedsConversion([string]$runXml) {
     foreach ($fontName in $legacyFonts) {
-        if ($runXml.Contains($fontName)) { return $true }
+        # Match a complete quoted font attribute. Without the quotes,
+        # "TCRC Youtso" also matches "TCRC Youtso Unicode".
+        if ($runXml.Contains('"' + $fontName + '"')) { return $true }
     }
-    # re-fonted legacy text: new font name but legacy characters inside
+    # Re-fonted legacy text: new font name but legacy characters inside.
+    # Check the complete mapping so rare Windows-1252 leftovers are caught.
     if ($runXml.Contains($replacementFont)) {
-        foreach ($signature in $signatureChars) {
-            if ($runXml.Contains($signature)) { return $true }
+        foreach ($textMatch in $textPattern.Matches($runXml)) {
+            $plainText = [System.Net.WebUtility]::HtmlDecode($textMatch.Groups[2].Value)
+            foreach ($character in $plainText.ToCharArray()) {
+                $code = [int]$character
+                if (($code -ge 0x80) -and $table.ContainsKey($code)) {
+                    return $true
+                }
+            }
         }
     }
     return $false
@@ -110,6 +119,10 @@ function Convert-DocumentXml([string]$xml) {
     return $result
 }
 
+function Test-IsStoryPart([string]$entryName) {
+    return $entryName -match '^word/(document|header\d+|footer\d+|footnotes|endnotes|comments(Extended|Extensible)?)\.xml$'
+}
+
 function Update-ZipEntry($zip, [string]$entryName, [string]$newContent) {
     $entry = $zip.GetEntry($entryName)
     if ($null -eq $entry) { return }
@@ -135,16 +148,38 @@ function Read-ZipEntry($zip, [string]$entryName) {
 # Main: copy the original, then convert the copy in place.
 # ---------------------------------------------------------------------------
 $sourceFile = Get-Item -LiteralPath $Path
-$targetName = $sourceFile.BaseName + " (Unicode)" + $sourceFile.Extension
-$targetPath = Join-Path $sourceFile.DirectoryName $targetName
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $targetName = $sourceFile.BaseName + " (Unicode)" + $sourceFile.Extension
+    $targetPath = Join-Path $sourceFile.DirectoryName $targetName
+} else {
+    $targetPath = [IO.Path]::GetFullPath($OutputPath)
+}
+
+if ($sourceFile.Extension -ine ".docx") {
+    throw "The conversion engine only accepts .docx input."
+}
+if ($sourceFile.FullName -ieq $targetPath) {
+    throw "The output path must be different from the source path."
+}
 
 Copy-Item -LiteralPath $sourceFile.FullName -Destination $targetPath -Force
 
 $zip = [System.IO.Compression.ZipFile]::Open($targetPath, "Update")
 try {
-    $documentXml = Read-ZipEntry $zip "word/document.xml"
-    if ($null -ne $documentXml) {
-        Update-ZipEntry $zip "word/document.xml" (Convert-DocumentXml $documentXml)
+    # Make a plain list before editing entries. Enumerating the live ZIP
+    # collection while replacing content is unreliable on older PowerShell.
+    $storyParts = @()
+    foreach ($entry in $zip.Entries) {
+        if (Test-IsStoryPart $entry.FullName) {
+            $storyParts += $entry.FullName
+        }
+    }
+
+    foreach ($storyPart in $storyParts) {
+        $storyXml = Read-ZipEntry $zip $storyPart
+        if ($null -ne $storyXml) {
+            Update-ZipEntry $zip $storyPart (Convert-DocumentXml $storyXml)
+        }
     }
 
     $stylesXml = Read-ZipEntry $zip "word/styles.xml"

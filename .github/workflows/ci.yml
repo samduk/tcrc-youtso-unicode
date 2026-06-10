@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes nsis zip
+          python3 -m pip install "fonttools>=4.0"
+
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Build release artifacts
+        run: bash tools/build_release.sh
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcrc-youtso-unicode-windows
+          path: |
+            dist/TCRC-Youtso-Unicode-Setup.exe
+            dist/SHA256SUMS.txt
+            dist/TCRC-Windows-Test-*.zip
+
+  validate-windows-scripts:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download pinned AutoHotkey runtime
+        shell: pwsh
+        run: |
+          $version = "2.0.19"
+          $archive = "AutoHotkey_$version.zip"
+          $url = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$version/$archive"
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          $expected = "4e0d0e65655066a646a210951320feaef0729a3597177131adaec4066bef5869"
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "AutoHotkey checksum mismatch"
+          }
+          Expand-Archive $archive -DestinationPath ahk
+
+      - name: Validate AutoHotkey scripts
+        shell: pwsh
+        run: |
+          $ahk = Resolve-Path "ahk\AutoHotkey64.exe"
+          $scripts = @(
+            "keyboard\TCRC-Tibetan-Unicode-Keyboard.ahk",
+            "converter\TCRC-Document-Converter.ahk"
+          )
+          foreach ($script in $scripts) {
+            & $ahk /ErrorStdOut=UTF-8 /Validate $script
+            if ($LASTEXITCODE -ne 0) {
+              throw "AutoHotkey validation failed: $script"
+            }
+          }
+
+      - name: Validate PowerShell scripts
+        shell: pwsh
+        run: |
+          $scripts = @(
+            "converter\convert-docx.ps1",
+            "converter\convert-document.ps1",
+            "windows-test\Test-TCRC-Windows.ps1"
+          )
+          foreach ($script in $scripts) {
+            $errors = $null
+            [Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $script),
+              [ref]$null,
+              [ref]$errors
+            ) > $null
+            if ($errors.Count) {
+              $errors | Format-List
+              throw "PowerShell validation failed: $script"
+            }
+          }

@@ -1,0 +1,7 @@
+# Only needed for the developer tools in tools/ .
+# The document converter (converter/) uses the Python standard library only.
+fonttools>=4.0
+uharfbuzz
+freetype-py
+pillow
+numpy

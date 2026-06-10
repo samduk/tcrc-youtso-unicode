@@ -108,6 +108,10 @@ bash tools/build_installer.sh
 The script downloads the AutoHotkey runtime, stages all files, and compiles
 `TCRC-Tibetan-Unicode-Setup.exe` with NSIS.
 
+**Full build guide** — including Windows instructions and how to turn the
+Python converter into a standalone `.exe` with PyInstaller — is in
+[docs/building.md](docs/building.md).
+
 ## How the legacy conversion table was made (the interesting part)
 
 The old font stores Tibetan glyphs on English codes, and there was no published

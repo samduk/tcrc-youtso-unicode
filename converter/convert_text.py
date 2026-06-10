@@ -17,10 +17,11 @@ import sys
 import unicodedata
 from pathlib import Path
 
+HERE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
 TABLE = {
     int(cp): text
     for cp, text in json.loads(
-        (Path(__file__).parent / "tcrc_to_unicode_map.json").read_text(encoding="utf-8")
+        (HERE / "tcrc_to_unicode_map.json").read_text(encoding="utf-8")
     ).items()
 }
 

@@ -35,7 +35,9 @@ from pathlib import Path
 #    This table was built by visually matching every glyph of the old font
 #    with the Unicode font — see tools/build_mapping.py for the full story.
 # ---------------------------------------------------------------------------
-HERE = Path(__file__).parent
+# When packaged into an .exe with PyInstaller, the data file lives in a
+# temporary folder that PyInstaller exposes as sys._MEIPASS.
+HERE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
 TABLE = {
     int(codepoint): unicode_text
     for codepoint, unicode_text in json.loads(

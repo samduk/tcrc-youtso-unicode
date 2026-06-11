@@ -54,6 +54,10 @@ for the current editing position in Microsoft Word, Excel, and PowerPoint. It
 also reapplies the font when you start typing after switching between those
 applications.
 
+In Excel, the font is reapplied before each Tibetan keystroke. After pressing
+`Tab`, `Enter`, an arrow key, or selecting another cell, you can type directly
+without choosing TCRC Youtso Unicode again.
+
 ## Microsoft Excel numbers
 
 Normal Unicode Tibetan digits are text in Excel. Text cannot be added,

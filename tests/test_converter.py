@@ -134,6 +134,15 @@ class ConverterTests(unittest.TestCase):
         self.assertIn('ComObjActive("PowerPoint.Application")', ahk_text)
         self.assertIn("word.Selection.Font.NameBi := UnicodeFont", ahk_text)
         self.assertIn("EnsureUnicodeFont()\n    SendText text", ahk_text)
+        self.assertIn(
+            'if WinActive("ahk_exe EXCEL.EXE") {\n'
+            "        ApplyUnicodeFont()\n"
+            "        return\n"
+            "    }",
+            ahk_text,
+        )
+        self.assertNotIn("excel.StandardFont", ahk_text)
+        self.assertNotIn('ActiveWorkbook.Styles("Normal")', ahk_text)
         self.assertNotIn("SetTimer", ahk_text)
         self.assertNotIn("LegacyMap", ahk_text)
         self.assertNotIn("convert-docx.ps1", ahk_text)

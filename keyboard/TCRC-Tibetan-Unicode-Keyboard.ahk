@@ -68,16 +68,6 @@ ApplyUnicodeFont() {
             }
         } else if WinActive("ahk_exe EXCEL.EXE") {
             excel := ComObjActive("Excel.Application")
-            ; make the font the DEFAULT for the whole workbook, so every
-            ; cell uses it without choosing it in the font box each time
-            try excel.ActiveWorkbook.Styles("Normal").Font.Name := UnicodeFont
-            catch {
-            }
-            ; and the default for future workbooks
-            ; (takes effect after Excel restarts)
-            try excel.StandardFont := UnicodeFont
-            catch {
-            }
             try excel.Selection.Font.Name := UnicodeFont
             catch {
             }
@@ -101,6 +91,14 @@ ApplyUnicodeFont() {
 
 EnsureUnicodeFont() {
     global FontAppliedWindow
+    ; Excel can assign a different font to every cell. Reapply the Unicode
+    ; font before each Tibetan keystroke so Tab, Enter, arrows, or a mouse
+    ; click cannot leave the newly selected cell using Aptos.
+    if WinActive("ahk_exe EXCEL.EXE") {
+        ApplyUnicodeFont()
+        return
+    }
+
     activeWindow := WinExist("A")
     if activeWindow != FontAppliedWindow
         ApplyUnicodeFont()

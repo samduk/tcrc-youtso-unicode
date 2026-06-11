@@ -15,9 +15,8 @@ global FontAppliedWindow := 0
 global ExcelEventApplication := 0
 global ExcelEventSink := 0
 global PendingExcelFormulaSheets := Map()
-global LastExcelFormulaSignature := ""
-global LastExcelFormulaReconcileTick := 0
-global ExcelReconcileRunning := false
+global ExcelSelectionPrepared := false
+global ExcelFormulaReconcileRunning := false
 
 global IconOn := A_ScriptDir "\tcrc_on.ico"
 global IconOff := A_ScriptDir "\tcrc_off.ico"
@@ -32,7 +31,6 @@ A_TrayMenu.Add(
 )
 
 UpdateKeyboardStatus()
-SetTimer ReconcileExcelFormulaFonts, 500
 
 ToggleTibetan(*) {
     global TibOn, LinkPending, PrevChar, LastChar
@@ -41,9 +39,10 @@ ToggleTibetan(*) {
     PrevChar := ""
     LastChar := ""
     UpdateKeyboardStatus()
-    if TibOn
+    if TibOn {
         ApplyUnicodeFont()
-    else
+        ScheduleExcelWorkbookReconcile()
+    } else
         DisconnectExcelEvents()
     TrayTip "TCRC Tibetan Keyboard",
         "Tibetan typing " (TibOn ? "ON" : "OFF")
@@ -62,7 +61,7 @@ UpdateKeyboardStatus() {
 ^!n::FormatExcelNumberCells()
 
 ApplyUnicodeFont() {
-    global UnicodeFont, FontAppliedWindow
+    global UnicodeFont, FontAppliedWindow, ExcelSelectionPrepared
 
     activeWindow := WinExist("A")
     if !activeWindow
@@ -78,8 +77,11 @@ ApplyUnicodeFont() {
         } else if WinActive("ahk_exe EXCEL.EXE") {
             excel := ComObjActive("Excel.Application")
             ConnectExcelEvents(excel)
-            try excel.Selection.Font.Name := UnicodeFont
-            catch {
+            try {
+                excel.Selection.Font.Name := UnicodeFont
+                ExcelSelectionPrepared := true
+            } catch {
+                ExcelSelectionPrepared := false
             }
         } else if WinActive("ahk_exe POWERPNT.EXE") {
             powerpoint := ComObjActive("PowerPoint.Application")
@@ -126,7 +128,7 @@ ConnectExcelEvents(excel) {
 DisconnectExcelEvents() {
     global ExcelEventApplication, ExcelEventSink
     global PendingExcelFormulaSheets
-    global LastExcelFormulaSignature, LastExcelFormulaReconcileTick
+    global ExcelSelectionPrepared
 
     if IsObject(ExcelEventApplication) {
         try ComObjConnect(ExcelEventApplication)
@@ -136,8 +138,7 @@ DisconnectExcelEvents() {
     ExcelEventApplication := 0
     ExcelEventSink := 0
     PendingExcelFormulaSheets := Map()
-    LastExcelFormulaSignature := ""
-    LastExcelFormulaReconcileTick := 0
+    ExcelSelectionPrepared := false
 }
 
 FormatExcelFormulaCells(sheet) {
@@ -187,68 +188,120 @@ FormatPendingExcelFormulaSheets() {
         FormatExcelFormulaCells(sheet)
 }
 
-ReconcileExcelFormulaFonts() {
+ScheduleExcelFormulaReconcile(delay := 350) {
     global TibOn
-    global LastExcelFormulaSignature, LastExcelFormulaReconcileTick
-    global ExcelReconcileRunning
 
-    if ExcelReconcileRunning
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE")
         return
-    if !TibOn || !WinActive("ahk_exe EXCEL.EXE") {
-        LastExcelFormulaSignature := ""
-        LastExcelFormulaReconcileTick := 0
-        return
-    }
+    SetTimer ReconcileActiveExcelFormulas, -delay
+}
 
-    ExcelReconcileRunning := true
+ScheduleExcelSelectionFormulaReconcile(delay := 250) {
+    global TibOn
+
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE")
+        return
+    SetTimer ReconcileSelectedExcelFormula, -delay
+}
+
+ScheduleExcelWorkbookReconcile(delay := 600) {
+    global TibOn
+
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE")
+        return
+    SetTimer ReconcileActiveExcelWorkbook, -delay
+}
+
+ReconcileActiveExcelFormulas() {
+    global TibOn, ExcelFormulaReconcileRunning
+
+    if ExcelFormulaReconcileRunning
+        return
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE")
+        return
+
+    ExcelFormulaReconcileRunning := true
     try {
         excel := ComObjActive("Excel.Application")
-        workbook := excel.ActiveWorkbook
-        worksheets := workbook.Worksheets
-        formulaSheets := []
-        signature := excel.Hwnd "|" workbook.Name
-
-        Loop worksheets.Count {
-            sheet := worksheets.Item(A_Index)
-            try {
-                formulaCells := sheet.UsedRange.SpecialCells(-4123)
-                signature .= "|" sheet.CodeName ":" formulaCells.Count
-                    . ":" formulaCells.Areas.Count
-                formulaSheets.Push(sheet)
-            } catch {
-                signature .= "|" sheet.CodeName ":0"
-            }
-        }
-
-        try {
-            signature .= "|selection:" excel.ActiveSheet.CodeName
-                . ":" excel.Selection.Address
-        }
-
-        now := A_TickCount
-        if (
-            signature != LastExcelFormulaSignature
-            || now - LastExcelFormulaReconcileTick >= 2000
-        ) {
-            for _, sheet in formulaSheets
-                FormatExcelFormulaCells(sheet)
-            LastExcelFormulaSignature := signature
-            LastExcelFormulaReconcileTick := now
-        }
-
-        try StampUnicodeFontOnRange(excel.Selection)
+        FormatExcelFormulaCells(excel.ActiveSheet)
     } catch {
-        LastExcelFormulaSignature := ""
-        LastExcelFormulaReconcileTick := 0
     } finally {
-        ExcelReconcileRunning := false
+        ExcelFormulaReconcileRunning := false
     }
+}
+
+ReconcileSelectedExcelFormula() {
+    global TibOn, UnicodeFont
+
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE")
+        return
+    try {
+        excel := ComObjActive("Excel.Application")
+        target := excel.Selection
+        if target.HasFormula
+            target.Font.Name := UnicodeFont
+    } catch {
+    }
+}
+
+ReconcileActiveExcelWorkbook() {
+    global TibOn, ExcelFormulaReconcileRunning
+
+    if ExcelFormulaReconcileRunning
+        return
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE")
+        return
+
+    ExcelFormulaReconcileRunning := true
+    try {
+        excel := ComObjActive("Excel.Application")
+        worksheets := excel.ActiveWorkbook.Worksheets
+        Loop worksheets.Count
+            FormatExcelFormulaCells(worksheets.Item(A_Index))
+    } catch {
+    } finally {
+        ExcelFormulaReconcileRunning := false
+    }
+}
+
+PrepareActiveExcelSelection() {
+    global TibOn, UnicodeFont, ExcelSelectionPrepared
+
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE")
+        return
+    try {
+        excel := ComObjActive("Excel.Application")
+        if (excel.Selection.Font.Name != UnicodeFont)
+            excel.Selection.Font.Name := UnicodeFont
+        ExcelSelectionPrepared := true
+    } catch {
+        ExcelSelectionPrepared := false
+    }
+}
+
+HandleExcelNavigation(*) {
+    global ExcelSelectionPrepared
+
+    ExcelSelectionPrepared := false
+    SetTimer ReconcileActiveExcelWorkbook, 0
+    SetTimer PrepareActiveExcelSelection, -30
+}
+
+HandleExcelCommit(*) {
+    HandleExcelNavigation()
+    ScheduleExcelFormulaReconcile()
+}
+
+HandleExcelMouseAction(*) {
+    HandleExcelNavigation()
+    ScheduleExcelSelectionFormulaReconcile()
 }
 
 class ExcelApplicationEvents {
     SheetChange(sheet, target, excel) {
         ; A committed value or formula keeps the same font as Tibetan input.
         StampUnicodeFontOnRange(target)
+        ScheduleExcelFormulaReconcile(100)
     }
 
     SheetCalculate(sheet, excel) {
@@ -262,10 +315,12 @@ class ExcelApplicationEvents {
     }
 
     SheetSelectionChange(sheet, target, excel) {
+        global ExcelSelectionPrepared
         ; the user moved to another cell (Tab, Enter, arrows, mouse):
         ; give the new cell the Unicode font immediately, like Word
         ; carries the font forward to whatever you type next
         StampUnicodeFontOnRange(target)
+        ExcelSelectionPrepared := true
     }
 }
 
@@ -285,12 +340,14 @@ StampUnicodeFontOnRange(target) {
 }
 
 EnsureUnicodeFont() {
-    global FontAppliedWindow
-    ; Excel can assign a different font to every cell. Reapply the Unicode
-    ; font before each Tibetan keystroke so Tab, Enter, arrows, or a mouse
-    ; click cannot leave the newly selected cell using Aptos.
+    global FontAppliedWindow, ExcelSelectionPrepared
+    ; Navigation prepares the new Excel cell once. Only the first keystroke
+    ; falls back to COM if the navigation notification has not completed yet.
     if WinActive("ahk_exe EXCEL.EXE") {
-        ApplyUnicodeFont()
+        if !ExcelSelectionPrepared {
+            SetTimer PrepareActiveExcelSelection, 0
+            PrepareActiveExcelSelection()
+        }
         return
     }
 
@@ -335,10 +392,30 @@ FormatExcelNumberCells(*) {
     )
 }
 
+#HotIf TibOn && WinActive("ahk_exe EXCEL.EXE")
+~*LButton Up::HandleExcelMouseAction()
+~*Enter::HandleExcelCommit()
+~*NumpadEnter::HandleExcelCommit()
+~*Tab::HandleExcelCommit()
+~*Up::HandleExcelNavigation()
+~*Down::HandleExcelNavigation()
+~*Left::HandleExcelNavigation()
+~*Right::HandleExcelNavigation()
+~*Home::HandleExcelNavigation()
+~*End::HandleExcelNavigation()
+~*PgUp::HandleExcelNavigation()
+~*PgDn::HandleExcelNavigation()
+
 #HotIf TibOn
 
 Out(text) {
     global PrevChar, LastChar, LinkPending
+    inExcel := WinActive("ahk_exe EXCEL.EXE")
+    if inExcel {
+        SetTimer ReconcileActiveExcelFormulas, 0
+        SetTimer ReconcileActiveExcelWorkbook, 0
+        SetTimer ReconcileSelectedExcelFormula, 0
+    }
     EnsureUnicodeFont()
     SendText text
     PrevChar := LastChar

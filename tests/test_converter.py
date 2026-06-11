@@ -135,14 +135,46 @@ class ConverterTests(unittest.TestCase):
         self.assertIn("word.Selection.Font.NameBi := UnicodeFont", ahk_text)
         self.assertIn("EnsureUnicodeFont()\n    SendText text", ahk_text)
         self.assertIn(
+            "SetTimer PrepareActiveExcelSelection, -30",
+            ahk_text,
+        )
+        self.assertIn("ScheduleExcelFormulaReconcile(delay := 350)", ahk_text)
+        self.assertIn(
+            "ScheduleExcelSelectionFormulaReconcile(delay := 250)",
+            ahk_text,
+        )
+        self.assertIn("ScheduleExcelWorkbookReconcile(delay := 600)", ahk_text)
+        self.assertIn("ReconcileActiveExcelFormulas()", ahk_text)
+        self.assertIn("ReconcileSelectedExcelFormula()", ahk_text)
+        self.assertIn("ReconcileActiveExcelWorkbook()", ahk_text)
+        self.assertIn("global ExcelSelectionPrepared := false", ahk_text)
+        self.assertIn("global ExcelFormulaReconcileRunning := false", ahk_text)
+        self.assertIn("SetTimer ReconcileActiveExcelFormulas, -delay", ahk_text)
+        self.assertIn(
+            "SetTimer ReconcileSelectedExcelFormula, -delay",
+            ahk_text,
+        )
+        self.assertIn("SetTimer ReconcileActiveExcelWorkbook, -delay", ahk_text)
+        self.assertIn("SetTimer ReconcileActiveExcelFormulas, 0", ahk_text)
+        self.assertIn("SetTimer ReconcileSelectedExcelFormula, 0", ahk_text)
+        self.assertIn("~*LButton Up::HandleExcelMouseAction()", ahk_text)
+        self.assertIn("~*Enter::HandleExcelCommit()", ahk_text)
+        self.assertNotIn("ScheduleExcelFormulaReconcile(600)", ahk_text)
+        self.assertNotIn(
             "SetTimer ReconcileExcelFormulaFonts, 500",
             ahk_text,
         )
-        self.assertIn("ReconcileExcelFormulaFonts()", ahk_text)
-        self.assertIn("global ExcelReconcileRunning := false", ahk_text)
-        self.assertIn("workbook := excel.ActiveWorkbook", ahk_text)
-        self.assertIn("Loop worksheets.Count", ahk_text)
-        self.assertIn("now - LastExcelFormulaReconcileTick >= 2000", ahk_text)
+        timer_lines = [
+            line.strip()
+            for line in ahk_text.splitlines()
+            if line.strip().startswith("SetTimer ")
+        ]
+        self.assertTrue(timer_lines)
+        for line in timer_lines:
+            self.assertTrue(
+                ", -" in line or line.endswith(", 0"),
+                f"recurring timer is not allowed: {line}",
+            )
         self.assertIn("ComObjConnect(excel, ExcelEventSink)", ahk_text)
         self.assertIn("class ExcelApplicationEvents", ahk_text)
         self.assertIn("SheetChange(sheet, target, excel)", ahk_text)
@@ -157,7 +189,7 @@ class ConverterTests(unittest.TestCase):
             'key := sheet.Parent.Name "|" sheet.CodeName',
             ahk_text,
         )
-        self.assertNotIn(
+        self.assertIn(
             "FormatExcelFormulaCells(excel.ActiveSheet)",
             ahk_text,
         )
@@ -184,7 +216,10 @@ class ConverterTests(unittest.TestCase):
         self.assertNotIn('Styles("Normal").Font.Name', ahk_text)
         self.assertIn(
             'if WinActive("ahk_exe EXCEL.EXE") {\n'
-            "        ApplyUnicodeFont()\n"
+            "        if !ExcelSelectionPrepared {\n"
+            "            SetTimer PrepareActiveExcelSelection, 0\n"
+            "            PrepareActiveExcelSelection()\n"
+            "        }\n"
             "        return\n"
             "    }",
             ahk_text,
@@ -193,7 +228,7 @@ class ConverterTests(unittest.TestCase):
         self.assertNotIn('ActiveWorkbook.Styles("Normal")', ahk_text)
         self.assertNotIn("LegacyMap", ahk_text)
         self.assertNotIn("convert-docx.ps1", ahk_text)
-        self.assertLess(len(ahk_text.splitlines()), 550)
+        self.assertLess(len(ahk_text.splitlines()), 625)
 
     def test_excel_number_mode_is_explicit(self):
         ahk_text = AHK_PATH.read_text(encoding="utf-8")

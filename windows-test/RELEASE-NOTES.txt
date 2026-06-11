@@ -1,14 +1,19 @@
-TCRC Youtso Unicode 1.4.4
+TCRC Youtso Unicode 1.4.5
 =========================
 
+- Removed continuous Excel polling, which could show a busy cursor and
+  interfere with rapidly typed numbers.
+- Excel formula checks now run only after formula commits, calculation events,
+  or relevant mouse actions. Ordinary typing and arrow navigation do not scan
+  the worksheet.
 - Moving between Excel cells with Tab, Enter, arrow keys, or the mouse now
   keeps TCRC Youtso Unicode active until Tibetan typing is turned off.
 - SUM, AVERAGE, AutoSum, and other formula result cells now switch to TCRC
   Youtso Unicode after Excel finishes recalculating active or inactive sheets.
 - Formula results separated across different rows and columns are formatted
   individually instead of only formatting the first result area.
-- An Excel-only reconciliation check now corrects formula result fonts when
-  an Office version omits or delays calculation events.
+- A deferred Excel reconciliation check corrects formula result fonts when an
+  Office version omits or delays calculation events.
 - The digits 0-9 in the font are now narrow Tibetan numerals with the same
   width as western digits: number columns sized before the change no longer
   overflow into "######".

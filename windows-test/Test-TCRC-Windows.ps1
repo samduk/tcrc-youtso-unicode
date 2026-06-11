@@ -175,11 +175,14 @@ try {
         $keyboardText.Contains("AfterCalculate(excel)") -and
         $keyboardText.Contains("QueueExcelFormulaSheet(sheet)") -and
         $keyboardText.Contains("FormatPendingExcelFormulaSheets()") -and
-        $keyboardText.Contains("SetTimer ReconcileExcelFormulaFonts, 500") -and
-        $keyboardText.Contains("ReconcileExcelFormulaFonts()") -and
+        $keyboardText.Contains("ScheduleExcelFormulaReconcile(delay := 350)") -and
+        $keyboardText.Contains("ScheduleExcelSelectionFormulaReconcile(delay := 250)") -and
+        $keyboardText.Contains("SetTimer ReconcileActiveExcelFormulas, -delay") -and
+        $keyboardText.Contains("SetTimer PrepareActiveExcelSelection, -30") -and
+        -not $keyboardText.Contains("SetTimer ReconcileExcelFormulaFonts, 500") -and
         $keyboardText.Contains("SheetSelectionChange(sheet, target, excel)") -and
         $keyboardText.Contains("StampUnicodeFontOnRange(target)")
-    ) "Keyboard includes event and polling Excel font handling"
+    ) "Keyboard includes deferred Excel font handling without continuous polling"
     Assert-True (Test-Path $converterExe) "Converter runtime is installed"
     Assert-True (Test-Path $converterUi) "Converter interface is installed"
     Assert-True (Test-Path $controller) "Converter controller is installed"
@@ -306,6 +309,7 @@ try {
     $sheetAverageResult = $null
     $averageInputs = $null
     $averageResult = $null
+    $rapidInputCell = $null
     $keyboardForExcel = $null
     $wscriptShell = $null
     try {
@@ -326,6 +330,7 @@ try {
         $sheetAverageResult = $worksheet.Range("C4")
         $averageInputs = $inactiveWorksheet.Range("A1:A2")
         $averageResult = $inactiveWorksheet.Range("A3")
+        $rapidInputCell = $worksheet.Range("D1")
 
         $worksheet.Range("A1").Value2 = 125
         $worksheet.Range("A2").Value2 = 75
@@ -368,6 +373,25 @@ try {
         $wscriptShell.SendKeys("^%t")
         Start-Sleep -Milliseconds 500
         $wscriptShell.SendKeys("^%t")
+        Start-Sleep -Seconds 1
+
+        $rapidInputCell.Font.Name = "TCRC Youtso Unicode"
+        $rapidInputCell.Select()
+        $wscriptShell.SendKeys("30{ENTER}")
+        Start-Sleep -Seconds 1
+        Assert-True (
+            [double]$rapidInputCell.Value2 -eq 30
+        ) "Rapid consecutive Excel digits are entered in the correct order"
+
+        $sumResult.Font.Name = "Arial"
+        $secondSumResult.Font.Name = "Arial"
+        $sheetAverageResult.Font.Name = "Arial"
+        $averageResult.Font.Name = "Arial"
+        $worksheet.Activate()
+        $wscriptShell.SendKeys("{ENTER}")
+        Start-Sleep -Seconds 1
+        $inactiveWorksheet.Activate()
+        $wscriptShell.SendKeys("{ENTER}")
         Start-Sleep -Seconds 1
 
         $worksheet.Range("A1").Value2 = 150
@@ -419,6 +443,7 @@ try {
 
         foreach ($comObject in @(
             $wscriptShell,
+            $rapidInputCell,
             $averageResult,
             $averageInputs,
             $sheetAverageResult,

@@ -23,6 +23,7 @@ The test verifies:
 - SUM and AVERAGE calculation and automatic TCRC result fonts in active and
   inactive Microsoft Excel worksheets, including results scattered across
   different rows and columns and with Excel events deliberately disabled;
+- rapid consecutive digit entry preserves digit order without dropped input;
 - startup of the visible converter window.
 
 Manual check

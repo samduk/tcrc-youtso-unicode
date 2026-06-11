@@ -138,10 +138,18 @@ class ConverterTests(unittest.TestCase):
         self.assertIn("class ExcelApplicationEvents", ahk_text)
         self.assertIn("SheetChange(sheet, target, excel)", ahk_text)
         self.assertIn("SheetCalculate(sheet, excel)", ahk_text)
+        self.assertIn("SheetSelectionChange(sheet, target, excel)", ahk_text)
         self.assertIn("FormatExcelFormulaTarget(target)", ahk_text)
         self.assertIn("FormatExcelFormulaCells(sheet)", ahk_text)
+        self.assertIn("StampUnicodeFontOnRange(target)", ahk_text)
+        self.assertIn(
+            "if (target.Font.Name != UnicodeFont)\n"
+            "            target.Font.Name := UnicodeFont",
+            ahk_text,
+        )
         self.assertIn("DisconnectExcelEvents()", ahk_text)
         self.assertIn("sheet.UsedRange.SpecialCells(-4123)", ahk_text)
+        self.assertNotIn('Styles("Normal").Font.Name', ahk_text)
         self.assertIn(
             'if WinActive("ahk_exe EXCEL.EXE") {\n'
             "        ApplyUnicodeFont()\n"

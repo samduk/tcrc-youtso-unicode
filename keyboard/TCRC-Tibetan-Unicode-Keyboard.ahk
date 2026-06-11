@@ -164,6 +164,28 @@ class ExcelApplicationEvents {
     SheetCalculate(sheet, excel) {
         FormatExcelFormulaCells(sheet)
     }
+
+    SheetSelectionChange(sheet, target, excel) {
+        ; the user moved to another cell (Tab, Enter, arrows, mouse):
+        ; give the new cell the Unicode font immediately, like Word
+        ; carries the font forward to whatever you type next
+        StampUnicodeFontOnRange(target)
+    }
+}
+
+StampUnicodeFontOnRange(target) {
+    global TibOn, UnicodeFont
+
+    if !TibOn
+        return
+    try {
+        if (target.Font.Name != UnicodeFont)
+            target.Font.Name := UnicodeFont
+    } catch {
+        ; Mixed-font selections can make Font.Name unavailable. Applying the
+        ; font to the range still gives the next value a consistent font.
+        try target.Font.Name := UnicodeFont
+    }
 }
 
 EnsureUnicodeFont() {

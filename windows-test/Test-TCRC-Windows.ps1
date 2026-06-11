@@ -159,8 +159,10 @@ try {
     $keyboardText = Get-Content -Raw -LiteralPath $keyboardScript
     Assert-True (
         $keyboardText.Contains("ComObjConnect(excel, ExcelEventSink)") -and
-        $keyboardText.Contains("SheetCalculate(sheet, excel)")
-    ) "Keyboard includes Excel formula-result font handling"
+        $keyboardText.Contains("SheetCalculate(sheet, excel)") -and
+        $keyboardText.Contains("SheetSelectionChange(sheet, target, excel)") -and
+        $keyboardText.Contains("StampUnicodeFontOnRange(target)")
+    ) "Keyboard includes persistent Excel font handling"
     Assert-True (Test-Path $converterExe) "Converter runtime is installed"
     Assert-True (Test-Path $converterUi) "Converter interface is installed"
     Assert-True (Test-Path $controller) "Converter controller is installed"

@@ -36,3 +36,7 @@ Manual check
 9. Use AutoSum in unformatted A3.
 10. Confirm A3 is automatically TCRC Youtso Unicode and displays 200 with
     Tibetan-looking digits.
+11. Move to another cell with Tab, Enter, an arrow key, and the mouse. Confirm
+    each selected cell automatically uses TCRC Youtso Unicode.
+12. Press Ctrl+Alt+T to turn Tibetan typing off and confirm moving to another
+    cell no longer changes its font.

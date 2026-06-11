@@ -18,9 +18,9 @@ class PackagingTests(unittest.TestCase):
             REPO_ROOT / "tools" / "build_installer.sh"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('!define APPVERSION "1.4.0"', installer)
-        self.assertIn('VIProductVersion "1.4.0.0"', installer)
-        self.assertTrue(release_notes.startswith("TCRC Youtso Unicode 1.4.0"))
+        self.assertIn('!define APPVERSION "1.4.1"', installer)
+        self.assertIn('VIProductVersion "1.4.1.0"', installer)
+        self.assertTrue(release_notes.startswith("TCRC Youtso Unicode 1.4.1"))
         self.assertIn('File "TCRC-Youtso-Unicode-fixed.ttf"', installer)
         self.assertNotIn('File "TCRC-Youtso-Excel-Numbers.ttf"', installer)
         self.assertNotIn("fonts/TCRC-Youtso-Excel-Numbers.ttf", build_script)

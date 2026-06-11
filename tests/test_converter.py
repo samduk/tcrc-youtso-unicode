@@ -148,15 +148,21 @@ class ConverterTests(unittest.TestCase):
         self.assertIn('TypeDigit("1", 0x0F21)', ahk_text)
 
     def test_main_font_draws_ascii_digits_as_tibetan(self):
-        cmap = TTFont(MAIN_FONT_PATH).getBestCmap()
+        # the characters 0-9 stay real western digits, but their glyphs are
+        # NARROW versions of the Tibetan numerals, with the same advance
+        # width (596) as the original western digits - so existing Excel
+        # column layouts keep fitting instead of showing "######"
+        font = TTFont(MAIN_FONT_PATH)
+        cmap = font.getBestCmap()
+        hmtx = font["hmtx"]
+        glyf = font["glyf"]
 
         for digit in range(10):
-            ascii_codepoint = ord("0") + digit
-            tibetan_codepoint = 0x0F20 + digit
-            self.assertEqual(
-                cmap[ascii_codepoint],
-                cmap[tibetan_codepoint],
-            )
+            ascii_glyph = cmap[ord("0") + digit]
+            tibetan_glyph = cmap[0x0F20 + digit]
+            component = glyf[ascii_glyph].components[0]
+            self.assertEqual(component.glyphName, tibetan_glyph)
+            self.assertEqual(hmtx[ascii_glyph][0], 596)
 
     def test_converter_ui_is_explicit_and_preserves_the_source(self):
         gui_text = GUI_PATH.read_text(encoding="utf-8")

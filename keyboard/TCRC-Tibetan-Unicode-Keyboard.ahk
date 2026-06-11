@@ -68,7 +68,19 @@ ApplyUnicodeFont() {
             }
         } else if WinActive("ahk_exe EXCEL.EXE") {
             excel := ComObjActive("Excel.Application")
-            excel.Selection.Font.Name := UnicodeFont
+            ; make the font the DEFAULT for the whole workbook, so every
+            ; cell uses it without choosing it in the font box each time
+            try excel.ActiveWorkbook.Styles("Normal").Font.Name := UnicodeFont
+            catch {
+            }
+            ; and the default for future workbooks
+            ; (takes effect after Excel restarts)
+            try excel.StandardFont := UnicodeFont
+            catch {
+            }
+            try excel.Selection.Font.Name := UnicodeFont
+            catch {
+            }
         } else if WinActive("ahk_exe POWERPNT.EXE") {
             powerpoint := ComObjActive("PowerPoint.Application")
             selection := powerpoint.ActiveWindow.Selection

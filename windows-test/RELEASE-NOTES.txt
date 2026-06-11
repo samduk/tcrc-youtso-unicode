@@ -1,4 +1,10 @@
-TCRC Youtso Unicode 1.4.0
+TCRC Youtso Unicode 1.4.1
+1.4.1
+- The digits 0-9 in the font are now narrow Tibetan numerals with the same
+  width as western digits: number columns sized before the change no longer
+  overflow into "######".
+- Turning Tibetan typing ON inside Excel now sets TCRC Youtso Unicode as the
+  workbook default font - no more picking the font for every cell.
 =========================
 
 User experience

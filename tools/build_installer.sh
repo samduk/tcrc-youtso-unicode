@@ -29,7 +29,12 @@ cp keyboard/TCRC-Tibetan-Unicode-Keyboard.ahk "$STAGE/"
 cp converter/TCRC-Document-Converter.ahk \
     converter/convert-document.ps1 \
     converter/convert-docx.ps1 \
+    converter/convert-pptx.ps1 \
+    converter/convert-xlsx.ps1 \
     converter/tcrc_to_unicode_map.json \
+    "$STAGE/"
+cp adobe/TCRC-to-Unicode-Photoshop-Illustrator.jsx \
+    adobe/TCRC-to-Unicode-InDesign.jsx \
     "$STAGE/"
 cp docs/user-guide.md "$STAGE/README.txt"
 

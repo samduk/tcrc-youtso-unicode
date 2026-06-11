@@ -1,5 +1,13 @@
 # Controller for the TCRC Document Converter UI.
-# Supports modern .docx files directly and old .doc files through Word.
+#
+# Supported input:
+#   .docx / .doc   (Word;        .doc is upgraded through Word itself)
+#   .pptx / .ppt   (PowerPoint;  .ppt is upgraded through PowerPoint)
+#   .xlsx / .xls   (Excel;       .xls is upgraded through Excel)
+#
+# The matching engine script (convert-docx.ps1 / convert-pptx.ps1 /
+# convert-xlsx.ps1) does the actual conversion. The original file is
+# never modified; the result is "name (Unicode).<modern extension>".
 
 param(
     [Parameter(Mandatory = $true)]
@@ -10,7 +18,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 $scriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
-$docxConverter = Join-Path $scriptFolder "convert-docx.ps1"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 function Write-Status([string]$state, [string]$message) {
@@ -23,37 +30,46 @@ function Write-Status([string]$state, [string]$message) {
     }
 }
 
-function Save-LegacyDocAsDocx(
+# ---------------------------------------------------------------------------
+# Upgrading old binary formats (.doc/.ppt/.xls) to Open XML, using the
+# Office application itself. Each call saves a temporary modern file.
+# ---------------------------------------------------------------------------
+function Invoke-OfficeSaveAs(
+    [string]$application,    # "Word.Application" etc.
     [string]$sourcePath,
-    [string]$temporaryDocx
+    [string]$temporaryPath,
+    [int]$saveFormat         # app-specific format number
 ) {
-    $word = $null
+    $app = $null
     $document = $null
     try {
-        $word = New-Object -ComObject Word.Application
-        $word.Visible = $false
-        $word.DisplayAlerts = 0
-        $document = $word.Documents.Open(
-            $sourcePath,
-            $false,
-            $true,
-            $false
-        )
-        # 16 = wdFormatDocumentDefault (.docx)
-        $document.SaveAs2($temporaryDocx, 16)
+        $app = New-Object -ComObject $application
+        try { $app.Visible = $false } catch { }
+        try { $app.DisplayAlerts = 0 } catch { }
+
+        if ($application -eq "Word.Application") {
+            $document = $app.Documents.Open($sourcePath, $false, $true, $false)
+            $document.SaveAs2($temporaryPath, $saveFormat)
+        }
+        elseif ($application -eq "PowerPoint.Application") {
+            # PowerPoint does not allow Visible = false; open the file
+            # without a window instead (ReadOnly, no Untitled, no Window)
+            $document = $app.Presentations.Open($sourcePath, $true, $false, $false)
+            $document.SaveAs($temporaryPath, $saveFormat)
+        }
+        else {
+            $document = $app.Workbooks.Open($sourcePath, 0, $true)
+            $document.SaveAs($temporaryPath, $saveFormat)
+        }
     }
     finally {
         if ($null -ne $document) {
-            $document.Close($false)
-            [Runtime.InteropServices.Marshal]::ReleaseComObject(
-                $document
-            ) | Out-Null
+            try { $document.Close($false) } catch { try { $document.Close() } catch { } }
+            [Runtime.InteropServices.Marshal]::ReleaseComObject($document) | Out-Null
         }
-        if ($null -ne $word) {
-            $word.Quit()
-            [Runtime.InteropServices.Marshal]::ReleaseComObject(
-                $word
-            ) | Out-Null
+        if ($null -ne $app) {
+            $app.Quit()
+            [Runtime.InteropServices.Marshal]::ReleaseComObject($app) | Out-Null
         }
         [GC]::Collect()
         [GC]::WaitForPendingFinalizers()
@@ -66,43 +82,61 @@ trap {
     exit 1
 }
 
-if (-not (Test-Path -LiteralPath $docxConverter)) {
-    throw "The converter engine is missing. Reinstall the application."
-}
-
+# ---------------------------------------------------------------------------
+# Decide which engine and which steps this file needs.
+# ---------------------------------------------------------------------------
 $source = Get-Item -LiteralPath $Path
 $extension = $source.Extension.ToLowerInvariant()
-if ($extension -notin @(".doc", ".docx")) {
-    throw "Please select a Microsoft Word .doc or .docx file."
+
+# extension -> engine script, modern extension, and (for old binary
+# formats) which Office application upgrades it and with which format code
+$plan = $null
+switch ($extension) {
+    ".docx" { $plan = @{ Engine = "convert-docx.ps1"; Modern = ".docx"; App = "";                       Format = 0  } }
+    ".doc"  { $plan = @{ Engine = "convert-docx.ps1"; Modern = ".docx"; App = "Word.Application";       Format = 16 } }
+    ".pptx" { $plan = @{ Engine = "convert-pptx.ps1"; Modern = ".pptx"; App = "";                       Format = 0  } }
+    ".ppt"  { $plan = @{ Engine = "convert-pptx.ps1"; Modern = ".pptx"; App = "PowerPoint.Application"; Format = 24 } }
+    ".xlsx" { $plan = @{ Engine = "convert-xlsx.ps1"; Modern = ".xlsx"; App = "";                       Format = 0  } }
+    ".xls"  { $plan = @{ Engine = "convert-xlsx.ps1"; Modern = ".xlsx"; App = "Excel.Application";      Format = 51 } }
 }
-if ($source.BaseName.EndsWith(
-    " (Unicode)",
-    [StringComparison]::OrdinalIgnoreCase
-)) {
+# format codes: 16 = wdFormatDocumentDefault, 24 = ppSaveAsOpenXMLPresentation,
+#               51 = xlOpenXMLWorkbook
+
+if ($null -eq $plan) {
+    throw "Please select a Word, PowerPoint, or Excel file (.doc/.docx/.ppt/.pptx/.xls/.xlsx)."
+}
+
+$engineScript = Join-Path $scriptFolder $plan.Engine
+if (-not (Test-Path -LiteralPath $engineScript)) {
+    throw "The converter engine is missing. Reinstall the application."
+}
+if ($source.BaseName.EndsWith(" (Unicode)", [StringComparison]::OrdinalIgnoreCase)) {
     throw "This file already appears to be a Unicode copy."
 }
 
 $targetPath = Join-Path `
     $source.DirectoryName `
-    ($source.BaseName + " (Unicode).docx")
+    ($source.BaseName + " (Unicode)" + $plan.Modern)
 
-$temporaryDocx = $null
+$temporaryModern = $null
 $temporaryOutput = Join-Path `
     $source.DirectoryName `
     ("." + $source.BaseName + ".TCRC-" +
-        [guid]::NewGuid().ToString("N") + ".docx")
+        [guid]::NewGuid().ToString("N") + $plan.Modern)
 try {
-    $inputDocx = $source.FullName
-    if ($extension -eq ".doc") {
-        $temporaryDocx = Join-Path `
+    $inputFile = $source.FullName
+
+    # old binary format? upgrade it to the modern format first
+    if ($plan.App -ne "") {
+        $temporaryModern = Join-Path `
             ([IO.Path]::GetTempPath()) `
-            ("TCRC-" + [guid]::NewGuid().ToString("N") + ".docx")
-        Save-LegacyDocAsDocx $source.FullName $temporaryDocx
-        $inputDocx = $temporaryDocx
+            ("TCRC-" + [guid]::NewGuid().ToString("N") + $plan.Modern)
+        Invoke-OfficeSaveAs $plan.App $source.FullName $temporaryModern $plan.Format
+        $inputFile = $temporaryModern
     }
 
-    & $docxConverter `
-        -Path $inputDocx `
+    & $engineScript `
+        -Path $inputFile `
         -OutputPath $temporaryOutput |
         Out-Null
     if (
@@ -117,8 +151,8 @@ try {
         -Force
 }
 finally {
-    if ($null -ne $temporaryDocx) {
-        Remove-Item -LiteralPath $temporaryDocx -Force `
+    if ($null -ne $temporaryModern) {
+        Remove-Item -LiteralPath $temporaryModern -Force `
             -ErrorAction SilentlyContinue
     }
     Remove-Item -LiteralPath $temporaryOutput -Force `

@@ -155,3 +155,37 @@ bar should show ordinary digits even though the worksheet shows Tibetan digits.
 
 Open **Settings > Apps > Installed apps**, find **TCRC Youtso Unicode**, and
 select **Uninstall**.
+
+## Converting PowerPoint and Excel files
+
+The TCRC Document Converter (Start Menu or desktop shortcut) accepts
+Word, PowerPoint, and Excel files: .doc, .docx, .ppt, .pptx, .xls, .xlsx.
+You can also right-click any of these files and choose
+"Convert TCRC document to Unicode".
+
+The result is always a new file "name (Unicode)..." next to the original;
+old binary formats (.doc/.ppt/.xls) come out in the modern format.
+Originals are never modified.
+
+Command line (Python) versions for batch work:
+
+    python converter/convert_pptx.py "C:\My Slides" --batch
+    python converter/convert_xlsx.py "C:\My Sheets" --batch
+
+## Converting Photoshop, Illustrator, and InDesign files
+
+PSD/AI/INDD files can only be converted INSIDE the Adobe application.
+Two scripts are installed in the application folder's "adobe" subfolder
+(C:\Program Files\TCRC Tibetan Unicode\adobe):
+
+- Photoshop:   File > Scripts > Browse... ->
+               TCRC-to-Unicode-Photoshop-Illustrator.jsx
+- Illustrator: File > Scripts > Other Script... -> same file
+- InDesign:    copy TCRC-to-Unicode-InDesign.jsx into the Scripts Panel
+               folder (Window > Utilities > Scripts > right-click User >
+               Reveal), then double-click it in the Scripts panel.
+
+The scripts convert every legacy text layer/frame/story to Unicode and
+switch the font to TCRC Youtso Unicode. Always run them on a COPY of
+your file first. Photoshop additionally needs the World-Ready text
+engine enabled (see the Photoshop section above) for stacks to display.

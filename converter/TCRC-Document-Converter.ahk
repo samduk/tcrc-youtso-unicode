@@ -1,4 +1,5 @@
-; Visible Windows interface for converting legacy TCRC Word documents.
+; Visible Windows interface for converting legacy TCRC Office documents
+; (Word, PowerPoint, and Excel).
 
 #Requires AutoHotkey v2.0
 #SingleInstance Force
@@ -19,7 +20,7 @@ MainWindow.AddText("xm ym w570 Center", "TCRC Document Converter")
 MainWindow.SetFont("s10 Norm c303030", "Segoe UI")
 MainWindow.AddText(
     "xm y+14 w570 Center",
-    "Convert old TCRC Youtso or TCRC Bod-Yig Word documents to Unicode."
+    "Convert old TCRC Youtso / TCRC Bod-Yig Word, PowerPoint, and Excel files to Unicode."
 )
 MainWindow.AddText(
     "xm y+4 w570 Center",
@@ -29,7 +30,7 @@ MainWindow.AddText(
 MainWindow.SetFont("s9 Norm c606060", "Segoe UI")
 MainWindow.AddText(
     "xm y+22 w570 Center",
-    "Choose a .doc or .docx file, or drag the file onto this window."
+    "Choose a Word, PowerPoint, or Excel file, or drag it onto this window."
 )
 
 global PathBox := MainWindow.AddEdit(
@@ -75,8 +76,8 @@ ChooseDocument(*) {
     selected := FileSelect(
         3,
         "",
-        "Choose a legacy TCRC Word document",
-        "Word documents (*.doc; *.docx)"
+        "Choose a legacy TCRC Office document",
+        "Office documents (*.doc; *.docx; *.ppt; *.pptx; *.xls; *.xlsx)"
     )
     if (selected != "")
         SetSourceFile(selected)
@@ -100,9 +101,15 @@ SetSourceFile(path) {
 
     SplitPath path, , , &extension
     extension := StrLower(extension)
-    if (extension != "doc" && extension != "docx") {
+    supported := ["doc", "docx", "ppt", "pptx", "xls", "xlsx"]
+    isSupported := false
+    for supportedExtension in supported {
+        if (extension = supportedExtension)
+            isSupported := true
+    }
+    if (!isSupported) {
         MsgBox(
-            "Please choose a Microsoft Word .doc or .docx file.",
+            "Please choose a Word, PowerPoint, or Excel file`n(.doc/.docx/.ppt/.pptx/.xls/.xlsx).",
             AppTitle,
             "Icon!"
         )
@@ -134,7 +141,15 @@ ConvertDocument(*) {
         return
     }
 
-    target := folder "\" nameOnly " (Unicode).docx"
+    ; old binary formats are saved as their modern equivalent
+    modernExtension := StrLower(extension)
+    if (modernExtension = "doc")
+        modernExtension := "docx"
+    else if (modernExtension = "ppt")
+        modernExtension := "pptx"
+    else if (modernExtension = "xls")
+        modernExtension := "xlsx"
+    target := folder "\" nameOnly " (Unicode)." modernExtension
     if FileExist(target) {
         answer := MsgBox(
             "A converted copy already exists.`n`n" target
@@ -186,7 +201,7 @@ ConvertDocument(*) {
         separator := InStr(status, "`n")
         if (separator > 0)
             message .= "`n`n" Trim(SubStr(status, separator + 1), "`r`n ")
-        message .= "`n`nClose the document in Word and try again."
+        message .= "`n`nClose the file in its Office application and try again."
         StatusText.Value := "Conversion failed."
         MsgBox message, AppTitle, "Iconx"
         return

@@ -71,10 +71,18 @@ Section "Install"
   File "TCRC-Document-Converter.ahk"
   File "convert-document.ps1"
   File "convert-docx.ps1"
+  File "convert-pptx.ps1"
+  File "convert-xlsx.ps1"
   File "tcrc_to_unicode_map.json"
   File "README.txt"
   File "tcrc_on.ico"
   File "tcrc_off.ico"
+
+  ; Scripts for Adobe Photoshop, Illustrator, and InDesign.
+  SetOutPath "$INSTDIR\adobe"
+  File "TCRC-to-Unicode-Photoshop-Illustrator.jsx"
+  File "TCRC-to-Unicode-InDesign.jsx"
+  SetOutPath "$INSTDIR"
 
   ; Install and notify Windows about the font.
   SetOutPath "$FONTS"
@@ -163,6 +171,59 @@ Section "Install"
     "" \
     '"$INSTDIR\TCRC-Document-Converter.exe" "$INSTDIR\TCRC-Document-Converter.ahk" "%1"'
 
+
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.ppt\shell\TCRCConvertLegacy" \
+    "" \
+    "Convert TCRC document to Unicode"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.ppt\shell\TCRCConvertLegacy" \
+    "Icon" \
+    "$INSTDIR\tcrc_on.ico"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.ppt\shell\TCRCConvertLegacy\command" \
+    "" \
+    '"$INSTDIR\TCRC-Document-Converter.exe" "$INSTDIR\TCRC-Document-Converter.ahk" "%1"'
+
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.pptx\shell\TCRCConvertLegacy" \
+    "" \
+    "Convert TCRC document to Unicode"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.pptx\shell\TCRCConvertLegacy" \
+    "Icon" \
+    "$INSTDIR\tcrc_on.ico"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.pptx\shell\TCRCConvertLegacy\command" \
+    "" \
+    '"$INSTDIR\TCRC-Document-Converter.exe" "$INSTDIR\TCRC-Document-Converter.ahk" "%1"'
+
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.xls\shell\TCRCConvertLegacy" \
+    "" \
+    "Convert TCRC document to Unicode"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.xls\shell\TCRCConvertLegacy" \
+    "Icon" \
+    "$INSTDIR\tcrc_on.ico"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.xls\shell\TCRCConvertLegacy\command" \
+    "" \
+    '"$INSTDIR\TCRC-Document-Converter.exe" "$INSTDIR\TCRC-Document-Converter.ahk" "%1"'
+
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.xlsx\shell\TCRCConvertLegacy" \
+    "" \
+    "Convert TCRC document to Unicode"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.xlsx\shell\TCRCConvertLegacy" \
+    "Icon" \
+    "$INSTDIR\tcrc_on.ico"
+  WriteRegStr HKLM \
+    "Software\Classes\SystemFileAssociations\.xlsx\shell\TCRCConvertLegacy\command" \
+    "" \
+    '"$INSTDIR\TCRC-Document-Converter.exe" "$INSTDIR\TCRC-Document-Converter.ahk" "%1"'
+
   ; Start the keyboard once per login.
   WriteRegStr HKLM \
     "Software\Microsoft\Windows\CurrentVersion\Run" \
@@ -205,6 +266,14 @@ Section "Uninstall"
     "Software\Classes\SystemFileAssociations\.doc\shell\TCRCConvertLegacy"
   DeleteRegKey HKLM \
     "Software\Classes\SystemFileAssociations\.docx\shell\TCRCConvertLegacy"
+  DeleteRegKey HKLM \
+    "Software\Classes\SystemFileAssociations\.ppt\shell\TCRCConvertLegacy"
+  DeleteRegKey HKLM \
+    "Software\Classes\SystemFileAssociations\.pptx\shell\TCRCConvertLegacy"
+  DeleteRegKey HKLM \
+    "Software\Classes\SystemFileAssociations\.xls\shell\TCRCConvertLegacy"
+  DeleteRegKey HKLM \
+    "Software\Classes\SystemFileAssociations\.xlsx\shell\TCRCConvertLegacy"
 
   Delete "$DESKTOP\TCRC Document Converter.lnk"
   Delete "$SMSTARTUP\TCRC Tibetan Keyboard.lnk"

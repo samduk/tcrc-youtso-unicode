@@ -156,6 +156,11 @@ Assert-True (
 try {
     Assert-True (Test-Path $keyboardExe) "Keyboard runtime is installed"
     Assert-True (Test-Path $keyboardScript) "Keyboard script is installed"
+    $keyboardText = Get-Content -Raw -LiteralPath $keyboardScript
+    Assert-True (
+        $keyboardText.Contains("ComObjConnect(excel, ExcelEventSink)") -and
+        $keyboardText.Contains("SheetCalculate(sheet, excel)")
+    ) "Keyboard includes Excel formula-result font handling"
     Assert-True (Test-Path $converterExe) "Converter runtime is installed"
     Assert-True (Test-Path $converterUi) "Converter interface is installed"
     Assert-True (Test-Path $controller) "Converter controller is installed"
@@ -341,8 +346,9 @@ try {
     Write-Host "2. Choose a copy of a legacy TCRC document."
     Write-Host "3. Confirm the result opens and the original is unchanged."
     Write-Host "4. Start the Tibetan Keyboard and test Ctrl+Alt+T."
-    Write-Host "5. In Excel, select cells and press Ctrl+Alt+N."
-    Write-Host "6. Enter 125 and 75, then confirm SUM returns 200."
+    Write-Host "5. In Excel, select A1:A2 and press Ctrl+Alt+N."
+    Write-Host "6. Enter 125 and 75, then use AutoSum in unformatted A3."
+    Write-Host "7. Confirm A3 returns 200 using TCRC Youtso Unicode."
 }
 finally {
     Stop-TcrcProcesses

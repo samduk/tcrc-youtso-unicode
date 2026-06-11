@@ -87,6 +87,10 @@ The prepared cells are real Excel numbers. You can:
 - divide with `/`;
 - sort and filter numerically.
 
+Formula and AutoSum result cells automatically use **TCRC Youtso Unicode**
+while Tibetan typing is on. Results continue to use that font when Excel
+recalculates the worksheet.
+
 When Tibetan typing is on, Excel receives ordinary digits and the operators
 `+`, `-`, `*`, `/`, and `=`. To enter cell references, click the cells while
 building the formula or press `Ctrl+Alt+T` temporarily to type Latin letters.

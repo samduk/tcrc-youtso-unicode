@@ -134,6 +134,14 @@ class ConverterTests(unittest.TestCase):
         self.assertIn('ComObjActive("PowerPoint.Application")', ahk_text)
         self.assertIn("word.Selection.Font.NameBi := UnicodeFont", ahk_text)
         self.assertIn("EnsureUnicodeFont()\n    SendText text", ahk_text)
+        self.assertIn("ComObjConnect(excel, ExcelEventSink)", ahk_text)
+        self.assertIn("class ExcelApplicationEvents", ahk_text)
+        self.assertIn("SheetChange(sheet, target, excel)", ahk_text)
+        self.assertIn("SheetCalculate(sheet, excel)", ahk_text)
+        self.assertIn("FormatExcelFormulaTarget(target)", ahk_text)
+        self.assertIn("FormatExcelFormulaCells(sheet)", ahk_text)
+        self.assertIn("DisconnectExcelEvents()", ahk_text)
+        self.assertIn("sheet.UsedRange.SpecialCells(-4123)", ahk_text)
         self.assertIn(
             'if WinActive("ahk_exe EXCEL.EXE") {\n'
             "        ApplyUnicodeFont()\n"
@@ -146,7 +154,7 @@ class ConverterTests(unittest.TestCase):
         self.assertNotIn("SetTimer", ahk_text)
         self.assertNotIn("LegacyMap", ahk_text)
         self.assertNotIn("convert-docx.ps1", ahk_text)
-        self.assertLess(len(ahk_text.splitlines()), 350)
+        self.assertLess(len(ahk_text.splitlines()), 450)
 
     def test_excel_number_mode_is_explicit(self):
         ahk_text = AHK_PATH.read_text(encoding="utf-8")

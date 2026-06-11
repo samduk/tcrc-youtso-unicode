@@ -31,6 +31,8 @@ Manual check
 4. Confirm the Unicode copy opens correctly.
 5. Confirm the original document still exists and was not modified.
 6. Start Tibetan Keyboard and test Ctrl+Alt+T in Word.
-7. Open Excel and select A1:A3.
+7. Open Excel and select A1:A2.
 8. Press Ctrl+Alt+N and enter 125 in A1 and 75 in A2.
-9. Use SUM in A3 and confirm the result is 200 in Tibetan-looking digits.
+9. Use AutoSum in unformatted A3.
+10. Confirm A3 is automatically TCRC Youtso Unicode and displays 200 with
+    Tibetan-looking digits.

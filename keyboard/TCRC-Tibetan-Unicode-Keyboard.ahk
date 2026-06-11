@@ -12,6 +12,8 @@ global LastChar := ""
 global UnicodeFont := "TCRC Youtso Unicode"
 global ExcelNumberFont := "TCRC Youtso Unicode"
 global FontAppliedWindow := 0
+global ExcelEventApplication := 0
+global ExcelEventSink := 0
 
 global IconOn := A_ScriptDir "\tcrc_on.ico"
 global IconOff := A_ScriptDir "\tcrc_off.ico"
@@ -36,6 +38,8 @@ ToggleTibetan(*) {
     UpdateKeyboardStatus()
     if TibOn
         ApplyUnicodeFont()
+    else
+        DisconnectExcelEvents()
     TrayTip "TCRC Tibetan Keyboard",
         "Tibetan typing " (TibOn ? "ON" : "OFF")
 }
@@ -68,6 +72,7 @@ ApplyUnicodeFont() {
             }
         } else if WinActive("ahk_exe EXCEL.EXE") {
             excel := ComObjActive("Excel.Application")
+            ConnectExcelEvents(excel)
             try excel.Selection.Font.Name := UnicodeFont
             catch {
             }
@@ -86,6 +91,78 @@ ApplyUnicodeFont() {
         FontAppliedWindow := activeWindow
     } catch {
         return
+    }
+}
+
+ConnectExcelEvents(excel) {
+    global ExcelEventApplication, ExcelEventSink
+
+    try {
+        if (
+            IsObject(ExcelEventApplication) and
+            ExcelEventApplication.Hwnd = excel.Hwnd
+        ) {
+            return
+        }
+    } catch {
+    }
+
+    DisconnectExcelEvents()
+    try {
+        ExcelEventSink := ExcelApplicationEvents()
+        ComObjConnect(excel, ExcelEventSink)
+        ExcelEventApplication := excel
+    } catch {
+        ExcelEventApplication := 0
+        ExcelEventSink := 0
+    }
+}
+
+DisconnectExcelEvents() {
+    global ExcelEventApplication, ExcelEventSink
+
+    if IsObject(ExcelEventApplication) {
+        try ComObjConnect(ExcelEventApplication)
+        catch {
+        }
+    }
+    ExcelEventApplication := 0
+    ExcelEventSink := 0
+}
+
+FormatExcelFormulaTarget(target) {
+    global TibOn, UnicodeFont
+
+    if !TibOn
+        return
+    try {
+        if target.HasFormula
+            target.Font.Name := UnicodeFont
+    } catch {
+    }
+}
+
+FormatExcelFormulaCells(sheet) {
+    global TibOn, UnicodeFont
+
+    if !TibOn
+        return
+    try {
+        ; -4123 is Excel's xlCellTypeFormulas constant.
+        formulaCells := sheet.UsedRange.SpecialCells(-4123)
+        formulaCells.Font.Name := UnicodeFont
+    } catch {
+        ; A sheet without formulas raises an exception from SpecialCells.
+    }
+}
+
+class ExcelApplicationEvents {
+    SheetChange(sheet, target, excel) {
+        FormatExcelFormulaTarget(target)
+    }
+
+    SheetCalculate(sheet, excel) {
+        FormatExcelFormulaCells(sheet)
     }
 }
 

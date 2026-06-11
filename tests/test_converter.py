@@ -127,10 +127,17 @@ class ConverterTests(unittest.TestCase):
     def test_keyboard_is_not_coupled_to_document_conversion(self):
         ahk_text = AHK_PATH.read_text(encoding="utf-8")
         self.assertIn("^!t::ToggleTibetan()", ahk_text)
+        self.assertIn("ApplyUnicodeFont()", ahk_text)
+        self.assertIn("EnsureUnicodeFont()", ahk_text)
+        self.assertIn('ComObjActive("Word.Application")', ahk_text)
+        self.assertIn('ComObjActive("Excel.Application")', ahk_text)
+        self.assertIn('ComObjActive("PowerPoint.Application")', ahk_text)
+        self.assertIn("word.Selection.Font.NameBi := UnicodeFont", ahk_text)
+        self.assertIn("EnsureUnicodeFont()\n    SendText text", ahk_text)
         self.assertNotIn("SetTimer", ahk_text)
         self.assertNotIn("LegacyMap", ahk_text)
         self.assertNotIn("convert-docx.ps1", ahk_text)
-        self.assertLess(len(ahk_text.splitlines()), 300)
+        self.assertLess(len(ahk_text.splitlines()), 350)
 
     def test_excel_number_mode_is_explicit(self):
         ahk_text = AHK_PATH.read_text(encoding="utf-8")
@@ -141,10 +148,7 @@ class ConverterTests(unittest.TestCase):
         self.assertIn('TypeDigit("1", 0x0F21)', ahk_text)
 
     def test_main_font_draws_ascii_digits_as_tibetan(self):
-        # one merged font: typing or storing 0-9 keeps the real numeric
-        # characters, but the glyphs drawn are the Tibetan numerals
-        font = TTFont(MAIN_FONT_PATH)
-        cmap = font.getBestCmap()
+        cmap = TTFont(MAIN_FONT_PATH).getBestCmap()
 
         for digit in range(10):
             ascii_codepoint = ord("0") + digit

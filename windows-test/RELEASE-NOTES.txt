@@ -1,4 +1,4 @@
-TCRC Youtso Unicode 1.3.0
+TCRC Youtso Unicode 1.4.0
 =========================
 
 User experience
@@ -13,6 +13,8 @@ User experience
 - Office-file right-click commands open the same visible converter.
 - Ctrl+Alt+N prepares selected Excel cells for Tibetan-looking numbers.
 - Excel stores real numeric values, so SUM and arithmetic continue to work.
+- Tibetan mode selects TCRC Youtso Unicode automatically in Word, Excel, and
+  PowerPoint.
 - Photoshop, Illustrator, and InDesign conversion scripts are included.
 
 Reliability and safety

@@ -101,19 +101,38 @@ function Convert-DigitsToTibetan([string]$text) {
     return $builder.ToString()
 }
 
+function Test-TextIsProbableLatinText([string]$text) {
+    # Require two multi-letter Latin words. A single letter plus a digit is
+    # common in ASCII-only legacy Tibetan and must not be treated as an address.
+    $wordLength = 0
+    $wordCount = 0
+    foreach ($character in $text.ToCharArray()) {
+        $isAsciiLetter = (
+            ($character -ge "A" -and $character -le "Z") -or
+            ($character -ge "a" -and $character -le "z")
+        )
+        if ($isAsciiLetter) {
+            $wordLength++
+        } else {
+            if ($wordLength -ge 2) { $wordCount++ }
+            $wordLength = 0
+        }
+    }
+    if ($wordLength -ge 2) { $wordCount++ }
+    return $wordCount -ge 2
+}
+
 function Get-ConversionMode([string]$text) {
     # "full"   - real legacy Tibetan text: convert every character
     # "digits" - a pure number (price, year): only digits become Tibetan
-    # "none"   - letters AND digits together (an address): leave untouched
+    # "none"   - clear Latin prose containing digits: leave untouched
     if (Test-TextHasAnyLegacyCharacter $text) { return "full" }
     if (Test-TextIsNumericOnly $text) { return "digits" }
-    $hasLetter = $false
     $hasDigit = $false
     foreach ($character in $text.ToCharArray()) {
-        if ([char]::IsLetter($character)) { $hasLetter = $true }
         if ([char]::IsDigit($character)) { $hasDigit = $true }
     }
-    if ($hasLetter -and $hasDigit) { return "none" }
+    if ($hasDigit -and (Test-TextIsProbableLatinText $text)) { return "none" }
     return "full"
 }
 

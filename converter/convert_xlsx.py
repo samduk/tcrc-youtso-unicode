@@ -104,22 +104,42 @@ def convert_digits_to_tibetan(text):
     return "".join(converted_pieces)
 
 
+def text_is_probable_latin_text(text):
+    """Recognize clear Latin prose without hiding short legacy codes.
+
+    Legacy TCRC text can be entirely ASCII, so a single letter plus a digit is
+    not enough evidence that a value is an English address. Require at least
+    two multi-letter Latin words before preserving mixed letter/digit text.
+    """
+    latin_words = []
+    current_word = []
+    for character in text:
+        if character.isascii() and character.isalpha():
+            current_word.append(character)
+        else:
+            if len(current_word) >= 2:
+                latin_words.append("".join(current_word))
+            current_word = []
+    if len(current_word) >= 2:
+        latin_words.append("".join(current_word))
+    return len(latin_words) >= 2
+
+
 def conversion_mode(text):
     """Decide HOW a legacy-context string should be converted.
 
     "full"   - real legacy Tibetan text: convert every character.
     "digits" - a pure number (a price, a year): only the digits become
                Tibetan; commas and decimal points stay where they are.
-    "none"   - letters AND digits together, like an address
+    "none"   - clear Latin prose containing digits, like an address
                ("V.J. Enterprises, NH -21, HP 175021"): leave untouched.
     """
     if text_has_any_legacy_character(text):
         return "full"
     if text_is_numeric_only(text):
         return "digits"
-    has_letter = any(character.isalpha() for character in text)
     has_digit = any(character.isdigit() for character in text)
-    if has_letter and has_digit:
+    if has_digit and text_is_probable_latin_text(text):
         return "none"
     return "full"
 

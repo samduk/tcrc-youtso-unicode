@@ -33,7 +33,7 @@ SHARED_STRINGS_XML = """<sst xmlns="http://schemas.openxmlformats.org/spreadshee
 <si><r><rPr><rFont val="TCRC Bod-Yig"/></rPr><t>hq¾-º‚ô¼</t></r><r><rPr><rFont val="Arial"/></rPr><t> (B)</t></r></si>
 <si><t>Total — 100% “done”</t></si>
 <si><t>café résumé</t></si>
-<si><t>G-M</t></si>
+<si><t>G-M 2024</t></si>
 <si><t>zôh-¾ô-MãÅ</t></si>
 </sst>"""
 
@@ -182,7 +182,7 @@ class XlsxConverterTest(unittest.TestCase):
             # the em-dash and curly quotes must NOT trigger a conversion
             self.assertEqual(texts[4], "Total — 100% “done”")
             self.assertEqual(texts[5], "café résumé")
-            self.assertEqual(texts[6], "ག་རྒྱ")
+            self.assertEqual(texts[6], "ག་རྒྱ ༢༠༢༤")
 
     def test_inline_and_mixed_shared_strings(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -237,6 +237,8 @@ class XlsxConverterTest(unittest.TestCase):
             '<si><t xml:space="preserve"> 644,936.00 </t></si>'
             '<si><t>V.J. Enterprises, Nagchala, NH -21 Mandi, HP 175021</t></si>'
             '<si><t>zôh, 2023/24</t></si>'
+            '<si><t>G(43)</t></si>'
+            '<si><t>G-M 2024</t></si>'
             '</sst>'
         )
         styles = (
@@ -250,6 +252,8 @@ class XlsxConverterTest(unittest.TestCase):
             '<c r="A1" t="s" s="0"><v>0</v></c>'
             '<c r="A2" t="s" s="0"><v>1</v></c>'
             '<c r="A3" t="s" s="0"><v>2</v></c>'
+            '<c r="A4" t="s" s="0"><v>3</v></c>'
+            '<c r="A5" t="s" s="0"><v>4</v></c>'
             '</row></sheetData></worksheet>'
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -268,6 +272,8 @@ class XlsxConverterTest(unittest.TestCase):
             # legacy text with comma and slash: Tibetan converted,
             # comma/slash/date kept literal
             self.assertEqual(texts[2], "བོད, ༢༠༢༣/༢༤")
+            self.assertEqual(texts[3], "ག(༤༣)")
+            self.assertEqual(texts[4], "ག་རྒྱ ༢༠༢༤")
 
     def test_styles_font_renamed(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -306,7 +312,7 @@ class XlsxConverterTest(unittest.TestCase):
 
             self.assertIn("བོད་ལོ་རྒྱུས", sheet)
             self.assertIn("café résumé", shared)
-            self.assertIn("ག་རྒྱ", shared)
+            self.assertIn("ག་རྒྱ ༢༠༢༤", shared)
 
 
 if __name__ == "__main__":

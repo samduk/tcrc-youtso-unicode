@@ -2,7 +2,7 @@ Unicode true
 !include "MUI2.nsh"
 
 !define APPNAME "TCRC Youtso Unicode"
-!define APPVERSION "1.3.0"
+!define APPVERSION "1.4.0"
 !define REGUN "Software\Microsoft\Windows\CurrentVersion\Uninstall\TCRCTibetanUnicode"
 !ifndef WM_FONTCHANGE
   !define WM_FONTCHANGE 0x001D
@@ -21,7 +21,7 @@ BrandingText "${APPNAME}"
 
 Icon "tcrc_on.ico"
 UninstallIcon "tcrc_off.ico"
-VIProductVersion "1.3.0.0"
+VIProductVersion "1.4.0.0"
 VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "FileDescription" "${APPNAME} Setup"
 VIAddVersionKey "FileVersion" "${APPVERSION}"
@@ -63,6 +63,11 @@ Section "Install"
   Delete /REBOOTOK "$PROGRAMFILES64\TCRC Tibetan Unicode\AutoHotkey64.exe"
   Delete /REBOOTOK "$INSTDIR\AutoHotkey64.exe"
   RMDir /r "$SMPROGRAMS\TCRC Youtso Tibetan Unicode"
+  DeleteRegValue HKLM \
+    "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" \
+    "TCRC Youtso Excel Numbers (TrueType)"
+  System::Call 'gdi32::RemoveFontResource(t "$FONTS\TCRC-Youtso-Excel-Numbers.ttf")'
+  Delete /REBOOTOK "$FONTS\TCRC-Youtso-Excel-Numbers.ttf"
 
   SetOutPath "$INSTDIR"
   File /oname=TCRC-Tibetan-Keyboard.exe "AutoHotkey64.exe"
@@ -280,10 +285,11 @@ Section "Uninstall"
   SendMessage ${HWND_BROADCAST} ${WM_FONTCHANGE} 0 0 /TIMEOUT=5000
   Delete /REBOOTOK "$FONTS\TCRC-Youtso-Unicode-fixed.ttf"
 
-  ; clean up the retired Excel Numbers font from older installations
+  ; Remove the separate number font left by versions before 1.4.0.
   DeleteRegValue HKLM \
     "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" \
     "TCRC Youtso Excel Numbers (TrueType)"
+  System::Call 'gdi32::RemoveFontResource(t "$FONTS\TCRC-Youtso-Excel-Numbers.ttf")'
   Delete /REBOOTOK "$FONTS\TCRC-Youtso-Excel-Numbers.ttf"
 
   RMDir /r /REBOOTOK "$INSTDIR"

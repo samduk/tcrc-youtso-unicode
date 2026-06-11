@@ -22,8 +22,6 @@ $converterEngine = Join-Path $installFolder "convert-docx.ps1"
 $fontFile = Join-Path `
     $env:WINDIR `
     "Fonts\TCRC-Youtso-Unicode-fixed.ttf"
-$excelNumberFontFile = Join-Path `
-    $env:WINDIR `
 $uninstaller = Join-Path $installFolder "uninstall.exe"
 
 $startMenuConverter = Join-Path $env:ProgramData `
@@ -107,9 +105,6 @@ try {
         Test-Path $converterEngine
     ) "Converter engine is installed"
     Assert-True (Test-Path $fontFile) "Unicode font file is installed"
-    Assert-True (
-        Test-Path $excelNumberFontFile
-    ) "Excel number font file is installed"
     Assert-True (
         Test-Path $startMenuConverter
     ) "Converter Start menu shortcut is installed"

@@ -9,7 +9,9 @@ global TibOn := true
 global LinkPending := false
 global PrevChar := ""
 global LastChar := ""
+global UnicodeFont := "TCRC Youtso Unicode"
 global ExcelNumberFont := "TCRC Youtso Unicode"
+global FontAppliedWindow := 0
 
 global IconOn := A_ScriptDir "\tcrc_on.ico"
 global IconOff := A_ScriptDir "\tcrc_off.ico"
@@ -32,6 +34,8 @@ ToggleTibetan(*) {
     PrevChar := ""
     LastChar := ""
     UpdateKeyboardStatus()
+    if TibOn
+        ApplyUnicodeFont()
     TrayTip "TCRC Tibetan Keyboard",
         "Tibetan typing " (TibOn ? "ON" : "OFF")
 }
@@ -47,6 +51,48 @@ UpdateKeyboardStatus() {
 
 ^!t::ToggleTibetan()
 ^!n::FormatExcelNumberCells()
+
+ApplyUnicodeFont() {
+    global UnicodeFont, FontAppliedWindow
+
+    activeWindow := WinExist("A")
+    if !activeWindow
+        return
+
+    try {
+        if WinActive("ahk_exe WINWORD.EXE") {
+            word := ComObjActive("Word.Application")
+            word.Selection.Font.Name := UnicodeFont
+            try word.Selection.Font.NameBi := UnicodeFont
+            catch {
+            }
+        } else if WinActive("ahk_exe EXCEL.EXE") {
+            excel := ComObjActive("Excel.Application")
+            excel.Selection.Font.Name := UnicodeFont
+        } else if WinActive("ahk_exe POWERPNT.EXE") {
+            powerpoint := ComObjActive("PowerPoint.Application")
+            selection := powerpoint.ActiveWindow.Selection
+            try selection.TextRange.Font.Name := UnicodeFont
+            catch {
+            }
+            try selection.TextRange2.Font.Name := UnicodeFont
+            catch {
+            }
+        } else {
+            return
+        }
+        FontAppliedWindow := activeWindow
+    } catch {
+        return
+    }
+}
+
+EnsureUnicodeFont() {
+    global FontAppliedWindow
+    activeWindow := WinExist("A")
+    if activeWindow != FontAppliedWindow
+        ApplyUnicodeFont()
+}
 
 FormatExcelNumberCells(*) {
     global ExcelNumberFont
@@ -88,6 +134,7 @@ FormatExcelNumberCells(*) {
 
 Out(text) {
     global PrevChar, LastChar, LinkPending
+    EnsureUnicodeFont()
     SendText text
     PrevChar := LastChar
     LastChar := SubStr(text, -1)

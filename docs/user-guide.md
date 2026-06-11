@@ -49,6 +49,10 @@ The TCRC keyboard starts automatically when you sign in to Windows.
 - The dark tray icon means Tibetan typing is off.
 
 The keyboard follows the traditional TCRC layout and produces Unicode Tibetan.
+When Tibetan typing turns on, it automatically selects **TCRC Youtso Unicode**
+for the current editing position in Microsoft Word, Excel, and PowerPoint. It
+also reapplies the font when you start typing after switching between those
+applications.
 
 ## Microsoft Excel numbers
 
@@ -99,9 +103,8 @@ Current Microsoft 365 versions do not always show a separate
 To type with TCRC Youtso:
 
 1. Open Word.
-2. Choose **TCRC Youtso Unicode** from the normal Home tab font list.
-3. Press `Ctrl+Alt+T` if Tibetan typing is off.
-4. Type normally.
+2. Press `Ctrl+Alt+T` if Tibetan typing is off.
+3. Type normally. The keyboard selects **TCRC Youtso Unicode** automatically.
 
 For an existing Unicode document, select the Tibetan text and choose
 **TCRC Youtso Unicode**.
@@ -140,8 +143,10 @@ Open the Start menu, search for **Tibetan Keyboard**, and start it. Then press
 
 ### Word uses another Tibetan font
 
-Select **TCRC Youtso Unicode** from Word's normal font list. The installer does
-not replace Microsoft Himalaya or modify other system fonts.
+Click the position where you want to type, switch Tibetan typing off and on
+with `Ctrl+Alt+T`, then type again. Tibetan mode applies **TCRC Youtso Unicode**
+to Word's current editing position. The installer does not replace Microsoft
+Himalaya or modify other system fonts.
 
 ### Excel shows ordinary digits
 

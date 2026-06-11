@@ -44,8 +44,8 @@ You can also drag a supported Office file onto the converter window. Windows
 The keyboard starts automatically after installation.
 
 - `Ctrl+Alt+T` switches Tibetan typing on or off.
-- Choose **TCRC Youtso Unicode** from the normal font list in Word or another
-  application.
+- In Word, Excel, and PowerPoint, Tibetan mode automatically selects
+  **TCRC Youtso Unicode** at the current editing position.
 - The keyboard produces standard Unicode Tibetan text.
 
 See the [Windows user guide](docs/user-guide.md) for Word and Photoshop setup.

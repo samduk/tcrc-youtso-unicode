@@ -11,9 +11,7 @@ The typeface itself — every outline, every stack, every spacing rule — is
 untouched and remains TCRC's work. See tools/repair_font.py for exactly what
 was changed and why.
 
-Since version 1.40 the font also DRAWS the ordinary digits 0-9 with the
-Tibetan numeral glyphs. The characters stay real western digits, so Excel
-formulas, sorting, and calculations keep working — only the appearance is
-Tibetan. One font covers Tibetan text and Tibetan-looking numbers; there is
-no separate Excel font anymore. (To show western digit shapes somewhere,
-use any other font like Calibri for that cell or run.)
+Since version 1.4.0, the font draws ordinary ASCII digits 0-9 with Tibetan
+numeral glyphs. The stored characters remain ASCII digits, so Excel formulas,
+sorting, and calculations continue to work. Western digit shapes are not
+preserved when text uses TCRC Youtso Unicode.

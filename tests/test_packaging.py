@@ -7,6 +7,33 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class PackagingTests(unittest.TestCase):
+    def test_release_version_and_merged_font_are_packaged(self):
+        installer = (REPO_ROOT / "installer" / "installer.nsi").read_text(
+            encoding="utf-8"
+        )
+        release_notes = (
+            REPO_ROOT / "windows-test" / "RELEASE-NOTES.txt"
+        ).read_text(encoding="utf-8")
+        build_script = (
+            REPO_ROOT / "tools" / "build_installer.sh"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('!define APPVERSION "1.4.0"', installer)
+        self.assertIn('VIProductVersion "1.4.0.0"', installer)
+        self.assertTrue(release_notes.startswith("TCRC Youtso Unicode 1.4.0"))
+        self.assertIn('File "TCRC-Youtso-Unicode-fixed.ttf"', installer)
+        self.assertNotIn('File "TCRC-Youtso-Excel-Numbers.ttf"', installer)
+        self.assertNotIn("fonts/TCRC-Youtso-Excel-Numbers.ttf", build_script)
+        install_section = installer.split('Section "Uninstall"', 1)[0]
+        self.assertIn(
+            '"TCRC Youtso Excel Numbers (TrueType)"',
+            install_section,
+        )
+        self.assertIn(
+            'Delete /REBOOTOK "$FONTS\\TCRC-Youtso-Excel-Numbers.ttf"',
+            install_section,
+        )
+
     def test_installer_uses_product_specific_processes(self):
         installer = (REPO_ROOT / "installer" / "installer.nsi").read_text(
             encoding="utf-8"

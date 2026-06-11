@@ -76,6 +76,53 @@ function Test-TextHasAnyLegacyCharacter([string]$text) {
     return $false
 }
 
+function Test-TextIsNumericOnly([string]$text) {
+    # Is this text just a number, like " 644,936.00 " or "2023-24"?
+    $hasDigit = $false
+    foreach ($character in $text.ToCharArray()) {
+        if ([char]::IsDigit($character)) {
+            $hasDigit = $true
+        } elseif (" .,-+%/()'".IndexOf($character) -lt 0) {
+            return $false
+        }
+    }
+    return $hasDigit
+}
+
+function Convert-DigitsToTibetan([string]$text) {
+    $builder = New-Object System.Text.StringBuilder
+    foreach ($character in $text.ToCharArray()) {
+        if ($character -ge "0" -and $character -le "9") {
+            [void]$builder.Append([char](0x0F20 + [int][string]$character))
+        } else {
+            [void]$builder.Append($character)
+        }
+    }
+    return $builder.ToString()
+}
+
+function Get-ConversionMode([string]$text) {
+    # "full"   - real legacy Tibetan text: convert every character
+    # "digits" - a pure number (price, year): only digits become Tibetan
+    # "none"   - letters AND digits together (an address): leave untouched
+    if (Test-TextHasAnyLegacyCharacter $text) { return "full" }
+    if (Test-TextIsNumericOnly $text) { return "digits" }
+    $hasLetter = $false
+    $hasDigit = $false
+    foreach ($character in $text.ToCharArray()) {
+        if ([char]::IsLetter($character)) { $hasLetter = $true }
+        if ([char]::IsDigit($character)) { $hasDigit = $true }
+    }
+    if ($hasLetter -and $hasDigit) { return "none" }
+    return "full"
+}
+
+function Convert-ByMode([string]$text, [string]$mode) {
+    if ($mode -eq "full") { return Convert-LegacyText $text }
+    if ($mode -eq "digits") { return Convert-DigitsToTibetan $text }
+    return $text
+}
+
 function Get-SpreadsheetNamespaceManager($document) {
     $namespaceManager = New-Object System.Xml.XmlNamespaceManager($document.NameTable)
     $namespaceManager.AddNamespace("s", $spreadsheetNamespace)
@@ -124,8 +171,9 @@ function Convert-StringContainer(
                 $shouldConvert = $true
             }
             if ($shouldConvert) {
+                $mode = Get-ConversionMode $runText
                 foreach ($textNode in $textNodes) {
-                    $textNode.InnerText = Convert-LegacyText $textNode.InnerText
+                    $textNode.InnerText = Convert-ByMode $textNode.InnerText $mode
                 }
             }
 
@@ -148,8 +196,9 @@ function Convert-StringContainer(
         $text += $textNode.InnerText
     }
     if ($force -or ($allowFallback -and (Test-TextHasLegacySignature $text))) {
+        $mode = Get-ConversionMode $text
         foreach ($textNode in $textNodes) {
-            $textNode.InnerText = Convert-LegacyText $textNode.InnerText
+            $textNode.InnerText = Convert-ByMode $textNode.InnerText $mode
         }
     }
 }

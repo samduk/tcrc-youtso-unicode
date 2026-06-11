@@ -82,6 +82,56 @@ def font_name(properties):
     return None if font is None else font.get("val")
 
 
+def text_is_numeric_only(text):
+    """Is this text just a number, like ' 644,936.00 ' or '2023-24'?"""
+    has_digit = False
+    for character in text:
+        if character.isdigit():
+            has_digit = True
+        elif character not in " .,-+%/()' ":
+            return False
+    return has_digit
+
+
+def convert_digits_to_tibetan(text):
+    """Turn western digits into Tibetan digits, leave everything else."""
+    converted_pieces = []
+    for character in text:
+        if "0" <= character <= "9":
+            converted_pieces.append(chr(0x0F20 + int(character)))
+        else:
+            converted_pieces.append(character)
+    return "".join(converted_pieces)
+
+
+def conversion_mode(text):
+    """Decide HOW a legacy-context string should be converted.
+
+    "full"   - real legacy Tibetan text: convert every character.
+    "digits" - a pure number (a price, a year): only the digits become
+               Tibetan; commas and decimal points stay where they are.
+    "none"   - letters AND digits together, like an address
+               ("V.J. Enterprises, NH -21, HP 175021"): leave untouched.
+    """
+    if text_has_any_legacy_character(text):
+        return "full"
+    if text_is_numeric_only(text):
+        return "digits"
+    has_letter = any(character.isalpha() for character in text)
+    has_digit = any(character.isdigit() for character in text)
+    if has_letter and has_digit:
+        return "none"
+    return "full"
+
+
+def convert_by_mode(text, mode):
+    if mode == "full":
+        return convert_text(text)
+    if mode == "digits":
+        return convert_digits_to_tibetan(text)
+    return text
+
+
 def convert_string_container(container, force=False, allow_fallback=False):
     """Convert one shared or inline string using run and cell font metadata."""
     rich_runs = container.findall("s:r", NS)
@@ -99,8 +149,9 @@ def convert_string_container(container, force=False, allow_fallback=False):
                 should_convert = True
 
             if should_convert:
+                mode = conversion_mode(text)
                 for text_node in run.findall("s:t", NS):
-                    text_node.text = convert_text(text_node.text or "")
+                    text_node.text = convert_by_mode(text_node.text or "", mode)
             if properties is not None:
                 font = properties.find("s:rFont", NS)
                 if font is not None and font.get("val") in LEGACY_FONT_NAMES:
@@ -110,8 +161,9 @@ def convert_string_container(container, force=False, allow_fallback=False):
     text_nodes = container.findall("s:t", NS)
     text = "".join(node.text or "" for node in text_nodes)
     if force or (allow_fallback and text_has_legacy_signature(text)):
+        mode = conversion_mode(text)
         for text_node in text_nodes:
-            text_node.text = convert_text(text_node.text or "")
+            text_node.text = convert_by_mode(text_node.text or "", mode)
 
 
 def style_font_flags(styles_xml):

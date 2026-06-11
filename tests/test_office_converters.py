@@ -228,6 +228,47 @@ class XlsxConverterTest(unittest.TestCase):
             self.assertNotIn("\u00bc", xml)       # the 1/4 sign is gone
             self.assertIn("\u0f62", xml)          # it became Tibetan RA
 
+    def test_numbers_and_addresses_in_legacy_cells(self):
+        # a legacy-styled NUMBER cell becomes Tibetan digits (separators
+        # kept), a legacy-styled ADDRESS cell stays untouched, and the
+        # comma/slash characters pass through full conversions unchanged
+        shared = (
+            '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<si><t xml:space="preserve"> 644,936.00 </t></si>'
+            '<si><t>V.J. Enterprises, Nagchala, NH -21 Mandi, HP 175021</t></si>'
+            '<si><t>zôh, 2023/24</t></si>'
+            '</sst>'
+        )
+        styles = (
+            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<fonts count="1"><font><name val="TCRC Bod-Yig"/></font></fonts>'
+            '<cellXfs count="1"><xf fontId="0"/></cellXfs></styleSheet>'
+        )
+        sheet = (
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<sheetData><row r="1">'
+            '<c r="A1" t="s" s="0"><v>0</v></c>'
+            '<c r="A2" t="s" s="0"><v>1</v></c>'
+            '<c r="A3" t="s" s="0"><v>2</v></c>'
+            '</row></sheetData></worksheet>'
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "book.xlsx"
+            with zipfile.ZipFile(path, "w") as z:
+                z.writestr("xl/sharedStrings.xml", shared)
+                z.writestr("xl/styles.xml", styles)
+                z.writestr("xl/worksheets/sheet1.xml", sheet)
+            result = convert_xlsx(path)
+            xml = zipfile.ZipFile(result).read("xl/sharedStrings.xml").decode("utf-8")
+            texts = texts_in(xml, "t")
+            self.assertEqual(texts[0], " ༦༤༤,༩༣༦.༠༠ ")   # number -> Tibetan digits
+            self.assertEqual(
+                texts[1],
+                "V.J. Enterprises, Nagchala, NH -21 Mandi, HP 175021")  # address untouched
+            # legacy text with comma and slash: Tibetan converted,
+            # comma/slash/date kept literal
+            self.assertEqual(texts[2], "བོད, ༢༠༢༣/༢༤")
+
     def test_styles_font_renamed(self):
         with tempfile.TemporaryDirectory() as temp:
             source = self.make_xlsx(Path(temp))

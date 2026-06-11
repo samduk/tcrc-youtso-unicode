@@ -1,4 +1,4 @@
-TCRC Youtso Unicode 1.4.3
+TCRC Youtso Unicode 1.4.4
 =========================
 
 - Moving between Excel cells with Tab, Enter, arrow keys, or the mouse now
@@ -7,6 +7,8 @@ TCRC Youtso Unicode 1.4.3
   Youtso Unicode after Excel finishes recalculating active or inactive sheets.
 - Formula results separated across different rows and columns are formatted
   individually instead of only formatting the first result area.
+- An Excel-only reconciliation check now corrects formula result fonts when
+  an Office version omits or delays calculation events.
 - The digits 0-9 in the font are now narrow Tibetan numerals with the same
   width as western digits: number columns sized before the change no longer
   overflow into "######".

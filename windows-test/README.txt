@@ -22,7 +22,7 @@ The test verifies:
 - opening the Unicode result in Microsoft Word;
 - SUM and AVERAGE calculation and automatic TCRC result fonts in active and
   inactive Microsoft Excel worksheets, including results scattered across
-  different rows and columns;
+  different rows and columns and with Excel events deliberately disabled;
 - startup of the visible converter window.
 
 Manual check

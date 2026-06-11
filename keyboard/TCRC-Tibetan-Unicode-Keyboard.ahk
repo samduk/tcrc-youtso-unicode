@@ -15,6 +15,9 @@ global FontAppliedWindow := 0
 global ExcelEventApplication := 0
 global ExcelEventSink := 0
 global PendingExcelFormulaSheets := Map()
+global LastExcelFormulaSignature := ""
+global LastExcelFormulaReconcileTick := 0
+global ExcelReconcileRunning := false
 
 global IconOn := A_ScriptDir "\tcrc_on.ico"
 global IconOff := A_ScriptDir "\tcrc_off.ico"
@@ -29,6 +32,7 @@ A_TrayMenu.Add(
 )
 
 UpdateKeyboardStatus()
+SetTimer ReconcileExcelFormulaFonts, 500
 
 ToggleTibetan(*) {
     global TibOn, LinkPending, PrevChar, LastChar
@@ -122,6 +126,7 @@ ConnectExcelEvents(excel) {
 DisconnectExcelEvents() {
     global ExcelEventApplication, ExcelEventSink
     global PendingExcelFormulaSheets
+    global LastExcelFormulaSignature, LastExcelFormulaReconcileTick
 
     if IsObject(ExcelEventApplication) {
         try ComObjConnect(ExcelEventApplication)
@@ -131,6 +136,8 @@ DisconnectExcelEvents() {
     ExcelEventApplication := 0
     ExcelEventSink := 0
     PendingExcelFormulaSheets := Map()
+    LastExcelFormulaSignature := ""
+    LastExcelFormulaReconcileTick := 0
 }
 
 FormatExcelFormulaCells(sheet) {
@@ -178,6 +185,64 @@ FormatPendingExcelFormulaSheets() {
         return
     for _, sheet in queuedSheets
         FormatExcelFormulaCells(sheet)
+}
+
+ReconcileExcelFormulaFonts() {
+    global TibOn
+    global LastExcelFormulaSignature, LastExcelFormulaReconcileTick
+    global ExcelReconcileRunning
+
+    if ExcelReconcileRunning
+        return
+    if !TibOn || !WinActive("ahk_exe EXCEL.EXE") {
+        LastExcelFormulaSignature := ""
+        LastExcelFormulaReconcileTick := 0
+        return
+    }
+
+    ExcelReconcileRunning := true
+    try {
+        excel := ComObjActive("Excel.Application")
+        workbook := excel.ActiveWorkbook
+        worksheets := workbook.Worksheets
+        formulaSheets := []
+        signature := excel.Hwnd "|" workbook.Name
+
+        Loop worksheets.Count {
+            sheet := worksheets.Item(A_Index)
+            try {
+                formulaCells := sheet.UsedRange.SpecialCells(-4123)
+                signature .= "|" sheet.CodeName ":" formulaCells.Count
+                    . ":" formulaCells.Areas.Count
+                formulaSheets.Push(sheet)
+            } catch {
+                signature .= "|" sheet.CodeName ":0"
+            }
+        }
+
+        try {
+            signature .= "|selection:" excel.ActiveSheet.CodeName
+                . ":" excel.Selection.Address
+        }
+
+        now := A_TickCount
+        if (
+            signature != LastExcelFormulaSignature
+            || now - LastExcelFormulaReconcileTick >= 2000
+        ) {
+            for _, sheet in formulaSheets
+                FormatExcelFormulaCells(sheet)
+            LastExcelFormulaSignature := signature
+            LastExcelFormulaReconcileTick := now
+        }
+
+        try StampUnicodeFontOnRange(excel.Selection)
+    } catch {
+        LastExcelFormulaSignature := ""
+        LastExcelFormulaReconcileTick := 0
+    } finally {
+        ExcelReconcileRunning := false
+    }
 }
 
 class ExcelApplicationEvents {

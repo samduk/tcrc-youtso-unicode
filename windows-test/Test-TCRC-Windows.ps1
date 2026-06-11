@@ -175,9 +175,11 @@ try {
         $keyboardText.Contains("AfterCalculate(excel)") -and
         $keyboardText.Contains("QueueExcelFormulaSheet(sheet)") -and
         $keyboardText.Contains("FormatPendingExcelFormulaSheets()") -and
+        $keyboardText.Contains("SetTimer ReconcileExcelFormulaFonts, 500") -and
+        $keyboardText.Contains("ReconcileExcelFormulaFonts()") -and
         $keyboardText.Contains("SheetSelectionChange(sheet, target, excel)") -and
         $keyboardText.Contains("StampUnicodeFontOnRange(target)")
-    ) "Keyboard includes persistent Excel font handling"
+    ) "Keyboard includes event and polling Excel font handling"
     Assert-True (Test-Path $converterExe) "Converter runtime is installed"
     Assert-True (Test-Path $converterUi) "Converter interface is installed"
     Assert-True (Test-Path $controller) "Converter controller is installed"
@@ -313,6 +315,7 @@ try {
 
         $workbook = $excel.Workbooks.Add()
         $excel.Calculation = -4135
+        $excel.EnableEvents = $false
         $worksheet = $workbook.Worksheets.Item(1)
         $inactiveWorksheet = $workbook.Worksheets.Add()
         $sumInputs = $worksheet.Range("A1:A2")
@@ -403,6 +406,9 @@ try {
     finally {
         if ($null -ne $keyboardForExcel) {
             Stop-TcrcProcesses
+        }
+        if ($null -ne $excel) {
+            $excel.EnableEvents = $true
         }
         if ($null -ne $workbook) {
             $workbook.Close($false)

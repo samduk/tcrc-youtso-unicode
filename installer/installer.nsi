@@ -2,7 +2,7 @@ Unicode true
 !include "MUI2.nsh"
 
 !define APPNAME "TCRC Youtso Unicode"
-!define APPVERSION "1.4.3"
+!define APPVERSION "1.4.4"
 !define REGUN "Software\Microsoft\Windows\CurrentVersion\Uninstall\TCRCTibetanUnicode"
 !ifndef WM_FONTCHANGE
   !define WM_FONTCHANGE 0x001D
@@ -21,7 +21,7 @@ BrandingText "${APPNAME}"
 
 Icon "tcrc_on.ico"
 UninstallIcon "tcrc_off.ico"
-VIProductVersion "1.4.3.0"
+VIProductVersion "1.4.4.0"
 VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "FileDescription" "${APPNAME} Setup"
 VIAddVersionKey "FileVersion" "${APPVERSION}"

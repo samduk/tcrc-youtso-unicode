@@ -134,6 +134,15 @@ class ConverterTests(unittest.TestCase):
         self.assertIn('ComObjActive("PowerPoint.Application")', ahk_text)
         self.assertIn("word.Selection.Font.NameBi := UnicodeFont", ahk_text)
         self.assertIn("EnsureUnicodeFont()\n    SendText text", ahk_text)
+        self.assertIn(
+            "SetTimer ReconcileExcelFormulaFonts, 500",
+            ahk_text,
+        )
+        self.assertIn("ReconcileExcelFormulaFonts()", ahk_text)
+        self.assertIn("global ExcelReconcileRunning := false", ahk_text)
+        self.assertIn("workbook := excel.ActiveWorkbook", ahk_text)
+        self.assertIn("Loop worksheets.Count", ahk_text)
+        self.assertIn("now - LastExcelFormulaReconcileTick >= 2000", ahk_text)
         self.assertIn("ComObjConnect(excel, ExcelEventSink)", ahk_text)
         self.assertIn("class ExcelApplicationEvents", ahk_text)
         self.assertIn("SheetChange(sheet, target, excel)", ahk_text)
@@ -148,7 +157,10 @@ class ConverterTests(unittest.TestCase):
             'key := sheet.Parent.Name "|" sheet.CodeName',
             ahk_text,
         )
-        self.assertNotIn("excel.ActiveSheet", ahk_text)
+        self.assertNotIn(
+            "FormatExcelFormulaCells(excel.ActiveSheet)",
+            ahk_text,
+        )
         self.assertIn("StampUnicodeFontOnRange(target)", ahk_text)
         self.assertIn(
             "if (target.Font.Name != UnicodeFont)\n"
@@ -179,10 +191,9 @@ class ConverterTests(unittest.TestCase):
         )
         self.assertNotIn("excel.StandardFont", ahk_text)
         self.assertNotIn('ActiveWorkbook.Styles("Normal")', ahk_text)
-        self.assertNotIn("SetTimer", ahk_text)
         self.assertNotIn("LegacyMap", ahk_text)
         self.assertNotIn("convert-docx.ps1", ahk_text)
-        self.assertLess(len(ahk_text.splitlines()), 475)
+        self.assertLess(len(ahk_text.splitlines()), 550)
 
     def test_excel_number_mode_is_explicit(self):
         ahk_text = AHK_PATH.read_text(encoding="utf-8")

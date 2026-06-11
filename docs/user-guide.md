@@ -89,7 +89,9 @@ The prepared cells are real Excel numbers. You can:
 
 SUM, AVERAGE, AutoSum, and other formula result cells automatically use
 **TCRC Youtso Unicode** while Tibetan typing is on. Results continue to use
-that font when Excel recalculates active or inactive worksheets.
+that font when Excel recalculates active or inactive worksheets. The keyboard
+also checks Excel periodically while it is active, so formula results are
+corrected even when that Excel version does not deliver a calculation event.
 
 Moving to another cell with Tab, Enter, an arrow key, or the mouse also applies
 **TCRC Youtso Unicode** to that cell. This remains active until Tibetan typing

@@ -18,7 +18,7 @@ The test verifies:
 - .doc and .docx right-click commands;
 - no Microsoft Himalaya font replacement;
 - preservation of the original document;
-- fast conversion against the verified Unicode reference;
+- conversion of a generated legacy test document to expected Unicode Tibetan;
 - opening the Unicode result in Microsoft Word;
 - Tibetan number display and numeric calculation in Microsoft Excel;
 - startup of the visible converter window.
@@ -26,10 +26,10 @@ The test verifies:
 Manual check
 ------------
 1. Open TCRC Document Converter from the desktop.
-2. Choose tcrc-test.docx.
+2. Choose a copy of a legacy TCRC Word document.
 3. Select Convert to Unicode.
-4. Confirm tcrc-test (Unicode).docx opens correctly.
-5. Confirm tcrc-test.docx still exists and was not modified.
+4. Confirm the Unicode copy opens correctly.
+5. Confirm the original document still exists and was not modified.
 6. Start Tibetan Keyboard and test Ctrl+Alt+T in Word.
 7. Open Excel and select A1:A3.
 8. Press Ctrl+Alt+N and enter 125 in A1 and 75 in A2.

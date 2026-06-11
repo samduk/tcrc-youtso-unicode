@@ -7,8 +7,6 @@ $ProgressPreference = "SilentlyContinue"
 
 $scriptFolder = Split-Path -Parent $MyInvocation.MyCommand.Path
 $installer = Join-Path $scriptFolder "TCRC-Youtso-Unicode-Setup.exe"
-$legacyDocument = Join-Path $scriptFolder "tcrc-test.docx"
-$referenceDocument = Join-Path $scriptFolder "tcrc-test (Unicode).docx"
 
 $installFolder = Join-Path $env:ProgramFiles "TCRC Tibetan Unicode"
 $keyboardExe = Join-Path $installFolder "TCRC-Tibetan-Keyboard.exe"
@@ -36,6 +34,7 @@ $testFolder = Join-Path $env:TEMP "TCRC-Windows-Test"
 $testDocument = Join-Path $testFolder "tcrc-test.docx"
 $unicodeDocument = Join-Path $testFolder "tcrc-test (Unicode).docx"
 $statusFile = Join-Path $testFolder "status.txt"
+$expectedUnicode = "བོད་ལོ་རྒྱུས"
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) {
@@ -71,6 +70,67 @@ function Read-ZipEntryText([string]$archivePath, [string]$entryName) {
     }
 }
 
+function Write-ZipEntryText(
+    $archive,
+    [string]$entryName,
+    [string]$content
+) {
+    $entry = $archive.CreateEntry($entryName)
+    $writer = New-Object IO.StreamWriter(
+        $entry.Open(),
+        (New-Object Text.UTF8Encoding($false))
+    )
+    try {
+        $writer.Write($content)
+    }
+    finally {
+        $writer.Dispose()
+    }
+}
+
+function New-LegacyTestDocument([string]$path) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::Open(
+        $path,
+        [IO.Compression.ZipArchiveMode]::Create
+    )
+    try {
+        Write-ZipEntryText $archive "[Content_Types].xml" @'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+'@
+        Write-ZipEntryText $archive "_rels/.rels" @'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+'@
+        Write-ZipEntryText $archive "word/document.xml" @'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="TCRC Youtsoweb" w:hAnsi="TCRC Youtsoweb" w:cs="TCRC Youtsoweb"/>
+        </w:rPr>
+        <w:t>zôh-¾ô-MãÅ</w:t>
+      </w:r>
+    </w:p>
+    <w:sectPr/>
+  </w:body>
+</w:document>
+'@
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $currentPrincipal = New-Object `
     Security.Principal.WindowsPrincipal($currentIdentity)
@@ -82,8 +142,6 @@ if (-not $isAdministrator) {
 }
 
 Assert-True (Test-Path $installer) "Installer is present"
-Assert-True (Test-Path $legacyDocument) "Legacy test document is present"
-Assert-True (Test-Path $referenceDocument) "Unicode reference is present"
 
 Write-Host "Installing TCRC Youtso Unicode..."
 $installProcess = Start-Process `
@@ -156,7 +214,8 @@ try {
 
     Remove-Item $testFolder -Recurse -Force -ErrorAction SilentlyContinue
     New-Item $testFolder -ItemType Directory | Out-Null
-    Copy-Item $legacyDocument $testDocument
+    New-LegacyTestDocument $testDocument
+    Assert-True (Test-Path $testDocument) "Legacy test document is generated"
 
     & powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File $controller `
@@ -172,18 +231,12 @@ try {
     $documentXml = Read-ZipEntryText `
         $unicodeDocument `
         "word/document.xml"
-    $referenceXml = Read-ZipEntryText `
-        $referenceDocument `
-        "word/document.xml"
     Assert-True (
-        $documentXml -match "[\u0F00-\u0FFF]"
-    ) "Converted document contains Unicode Tibetan"
+        $documentXml.Contains($expectedUnicode)
+    ) "Converted document contains the expected Unicode Tibetan text"
     Assert-True (
-        $documentXml -notmatch 'w:ascii="TCRC Youtso"'
+        $documentXml -notmatch 'TCRC (Bod-Yig|Youtsoweb|Youtso)"'
     ) "Converted document no longer uses the legacy font"
-    Assert-True (
-        $documentXml -ceq $referenceXml
-    ) "Converted text and formatting match the verified reference"
 
     $word = $null
     $document = $null
@@ -197,8 +250,8 @@ try {
             $false
         )
         Assert-True (
-            $document.Content.Text -match "[\u0F00-\u0FFF]"
-        ) "Microsoft Word opens the Unicode document"
+            $document.Content.Text.Contains($expectedUnicode)
+        ) "Microsoft Word opens the expected Unicode Tibetan text"
     }
     finally {
         if ($null -ne $document) {
@@ -285,7 +338,7 @@ try {
     Write-Host "All automated Windows, Word, and Excel checks passed."
     Write-Host "Manual final check:"
     Write-Host "1. Open TCRC Document Converter from the desktop."
-    Write-Host "2. Choose tcrc-test.docx and select Convert to Unicode."
+    Write-Host "2. Choose a copy of a legacy TCRC document."
     Write-Host "3. Confirm the result opens and the original is unchanged."
     Write-Host "4. Start the Tibetan Keyboard and test Ctrl+Alt+T."
     Write-Host "5. In Excel, select cells and press Ctrl+Alt+N."

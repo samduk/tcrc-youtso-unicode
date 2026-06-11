@@ -44,6 +44,7 @@ Verification
 - Python and PowerShell converters cover PowerPoint inherited fonts and Excel
   inline/mixed shared strings.
 - Ordinary accented Latin text is preserved during Excel conversion.
-- The supplied legacy document matches the verified Unicode reference.
+- The Windows test generates a legacy document and verifies its expected
+  Unicode Tibetan conversion.
 - Windows tests cover installation, shortcuts, registry integration,
   conversion, source preservation, Microsoft Word, and Excel calculation.

@@ -36,9 +36,7 @@ for file in \
     README.txt \
     RELEASE-NOTES.txt \
     Run-Windows-Test.cmd \
-    Test-TCRC-Windows.ps1 \
-    tcrc-test.docx \
-    "tcrc-test (Unicode).docx"
+    Test-TCRC-Windows.ps1
 do
     install -m 0644 "windows-test/$file" "$TEST_DIR/$file"
 done
@@ -50,11 +48,7 @@ install -m 0644 "$DIST/$INSTALLER_NAME" "$TEST_DIR/$INSTALLER_NAME"
 )
 (
     cd "$TEST_DIR"
-    sha256sum \
-        "$INSTALLER_NAME" \
-        tcrc-test.docx \
-        "tcrc-test (Unicode).docx" \
-        > SHA256SUMS.txt
+    sha256sum "$INSTALLER_NAME" > SHA256SUMS.txt
 )
 (
     cd "$DIST"

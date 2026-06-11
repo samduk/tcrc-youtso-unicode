@@ -7,6 +7,29 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class PackagingTests(unittest.TestCase):
+    def test_windows_test_generates_documents_at_runtime(self):
+        build_script = (
+            REPO_ROOT / "tools" / "build_release.sh"
+        ).read_text(encoding="utf-8")
+        windows_test = (
+            REPO_ROOT / "windows-test" / "Test-TCRC-Windows.ps1"
+        ).read_text(encoding="utf-8")
+
+        self.assertFalse(
+            (REPO_ROOT / "windows-test" / "tcrc-test.docx").exists()
+        )
+        self.assertFalse(
+            (
+                REPO_ROOT
+                / "windows-test"
+                / "tcrc-test (Unicode).docx"
+            ).exists()
+        )
+        self.assertNotIn("tcrc-test.docx", build_script)
+        self.assertNotIn("tcrc-test (Unicode).docx", build_script)
+        self.assertIn("New-LegacyTestDocument", windows_test)
+        self.assertIn("$expectedUnicode", windows_test)
+
     def test_release_version_and_merged_font_are_packaged(self):
         installer = (REPO_ROOT / "installer" / "installer.nsi").read_text(
             encoding="utf-8"

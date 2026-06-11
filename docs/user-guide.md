@@ -87,9 +87,9 @@ The prepared cells are real Excel numbers. You can:
 - divide with `/`;
 - sort and filter numerically.
 
-Formula and AutoSum result cells automatically use **TCRC Youtso Unicode**
-while Tibetan typing is on. Results continue to use that font when Excel
-recalculates the worksheet.
+SUM, AVERAGE, AutoSum, and other formula result cells automatically use
+**TCRC Youtso Unicode** while Tibetan typing is on. Results continue to use
+that font when Excel recalculates active or inactive worksheets.
 
 Moving to another cell with Tab, Enter, an arrow key, or the mouse also applies
 **TCRC Youtso Unicode** to that cell. This remains active until Tibetan typing

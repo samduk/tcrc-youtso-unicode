@@ -138,9 +138,17 @@ class ConverterTests(unittest.TestCase):
         self.assertIn("class ExcelApplicationEvents", ahk_text)
         self.assertIn("SheetChange(sheet, target, excel)", ahk_text)
         self.assertIn("SheetCalculate(sheet, excel)", ahk_text)
+        self.assertIn("AfterCalculate(excel)", ahk_text)
         self.assertIn("SheetSelectionChange(sheet, target, excel)", ahk_text)
-        self.assertIn("FormatExcelFormulaTarget(target)", ahk_text)
         self.assertIn("FormatExcelFormulaCells(sheet)", ahk_text)
+        self.assertIn("QueueExcelFormulaSheet(sheet)", ahk_text)
+        self.assertIn("FormatPendingExcelFormulaSheets()", ahk_text)
+        self.assertIn("global PendingExcelFormulaSheets := Map()", ahk_text)
+        self.assertIn(
+            'key := sheet.Parent.Name "|" sheet.CodeName',
+            ahk_text,
+        )
+        self.assertNotIn("excel.ActiveSheet", ahk_text)
         self.assertIn("StampUnicodeFontOnRange(target)", ahk_text)
         self.assertIn(
             "if (target.Font.Name != UnicodeFont)\n"
@@ -149,6 +157,11 @@ class ConverterTests(unittest.TestCase):
         )
         self.assertIn("DisconnectExcelEvents()", ahk_text)
         self.assertIn("sheet.UsedRange.SpecialCells(-4123)", ahk_text)
+        self.assertIn(
+            "if (formulaCells.Font.Name = UnicodeFont)\n"
+            "                return",
+            ahk_text,
+        )
         self.assertNotIn('Styles("Normal").Font.Name', ahk_text)
         self.assertIn(
             'if WinActive("ahk_exe EXCEL.EXE") {\n'

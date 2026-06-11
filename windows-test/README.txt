@@ -20,7 +20,8 @@ The test verifies:
 - preservation of the original document;
 - conversion of a generated legacy test document to expected Unicode Tibetan;
 - opening the Unicode result in Microsoft Word;
-- Tibetan number display and numeric calculation in Microsoft Excel;
+- SUM and AVERAGE calculation and automatic TCRC result fonts in active and
+  inactive Microsoft Excel worksheets;
 - startup of the visible converter window.
 
 Manual check
@@ -33,8 +34,9 @@ Manual check
 6. Start Tibetan Keyboard and test Ctrl+Alt+T in Word.
 7. Open Excel and select A1:A2.
 8. Press Ctrl+Alt+N and enter 125 in A1 and 75 in A2.
-9. Use AutoSum in unformatted A3.
-10. Confirm A3 is automatically TCRC Youtso Unicode and displays 200 with
+9. Use AutoSum in unformatted A3, then test AVERAGE in another unformatted
+   result cell.
+10. Confirm both results automatically use TCRC Youtso Unicode and display
     Tibetan-looking digits.
 11. Move to another cell with Tab, Enter, an arrow key, and the mouse. Confirm
     each selected cell automatically uses TCRC Youtso Unicode.

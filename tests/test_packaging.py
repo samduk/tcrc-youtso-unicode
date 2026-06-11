@@ -57,6 +57,24 @@ class PackagingTests(unittest.TestCase):
             install_section,
         )
 
+    def test_windows_test_verifies_automatic_formula_result_fonts(self):
+        windows_test = (
+            REPO_ROOT / "windows-test" / "Test-TCRC-Windows.ps1"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('$sumResult.Font.Name = "Arial"', windows_test)
+        self.assertIn('$averageResult.Font.Name = "Arial"', windows_test)
+        self.assertIn(
+            '$sumResult.Font.Name -eq "TCRC Youtso Unicode"',
+            windows_test,
+        )
+        self.assertIn(
+            '$averageResult.Font.Name -eq "TCRC Youtso Unicode"',
+            windows_test,
+        )
+        self.assertIn("$inactiveWorksheet.Range", windows_test)
+        self.assertIn('$wscriptShell.SendKeys("^%t")', windows_test)
+
     def test_installer_uses_product_specific_processes(self):
         installer = (REPO_ROOT / "installer" / "installer.nsi").read_text(
             encoding="utf-8"

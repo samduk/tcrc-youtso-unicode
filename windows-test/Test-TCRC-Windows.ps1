@@ -43,6 +43,18 @@ function Assert-True([bool]$condition, [string]$message) {
     Write-Host "[PASS] $message"
 }
 
+if (-not ("TcrcWindows" -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class TcrcWindows {
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+'@
+}
+
 function Stop-TcrcProcesses {
     Get-Process -Name "TCRC-Tibetan-Keyboard" `
         -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -160,6 +172,9 @@ try {
     Assert-True (
         $keyboardText.Contains("ComObjConnect(excel, ExcelEventSink)") -and
         $keyboardText.Contains("SheetCalculate(sheet, excel)") -and
+        $keyboardText.Contains("AfterCalculate(excel)") -and
+        $keyboardText.Contains("QueueExcelFormulaSheet(sheet)") -and
+        $keyboardText.Contains("FormatPendingExcelFormulaSheets()") -and
         $keyboardText.Contains("SheetSelectionChange(sheet, target, excel)") -and
         $keyboardText.Contains("StampUnicodeFontOnRange(target)")
     ) "Keyboard includes persistent Excel font handling"
@@ -280,32 +295,81 @@ try {
     $excel = $null
     $workbook = $null
     $worksheet = $null
-    $numberCells = $null
-    $resultCell = $null
+    $inactiveWorksheet = $null
+    $sumInputs = $null
+    $sumResult = $null
+    $averageInputs = $null
+    $averageResult = $null
+    $keyboardForExcel = $null
+    $wscriptShell = $null
     try {
         $excel = New-Object -ComObject Excel.Application
-        $excel.Visible = $false
+        $excel.Visible = $true
         $excel.DisplayAlerts = $false
 
         $workbook = $excel.Workbooks.Add()
+        $excel.Calculation = -4135
         $worksheet = $workbook.Worksheets.Item(1)
-        $numberCells = $worksheet.Range("A1:A3")
-        $resultCell = $worksheet.Range("A3")
+        $inactiveWorksheet = $workbook.Worksheets.Add()
+        $sumInputs = $worksheet.Range("A1:A2")
+        $sumResult = $worksheet.Range("A3")
+        $averageInputs = $inactiveWorksheet.Range("A1:A2")
+        $averageResult = $inactiveWorksheet.Range("A3")
 
         $worksheet.Range("A1").Value2 = 125
         $worksheet.Range("A2").Value2 = 75
-        $resultCell.Formula = "=SUM(A1:A2)"
-        $numberCells.Font.Name = "TCRC Youtso Unicode"
+        $sumResult.Formula = "=SUM(A1:A2)"
+        $inactiveWorksheet.Range("A1").Value2 = 10
+        $inactiveWorksheet.Range("A2").Value2 = 30
+        $averageResult.Formula = "=AVERAGE(A1:A2)"
+        $sumInputs.Font.Name = "TCRC Youtso Unicode"
+        $averageInputs.Font.Name = "TCRC Youtso Unicode"
+        $sumResult.Font.Name = "Arial"
+        $averageResult.Font.Name = "Arial"
+        $worksheet.Activate()
+
+        $keyboardForExcel = Start-Process `
+            -FilePath $keyboardExe `
+            -ArgumentList "`"$keyboardScript`"" `
+            -PassThru
+        Start-Sleep -Seconds 2
+
+        $wscriptShell = New-Object -ComObject WScript.Shell
+        $excelActivated = [TcrcWindows]::SetForegroundWindow(
+            [IntPtr]$excel.Hwnd
+        )
+        if (-not $excelActivated) {
+            $excelActivated = $wscriptShell.AppActivate($excel.Caption)
+        }
+        Assert-True $excelActivated "Excel can receive the keyboard toggle"
+        $wscriptShell.SendKeys("^%t")
+        Start-Sleep -Milliseconds 500
+        $wscriptShell.SendKeys("^%t")
+        Start-Sleep -Seconds 1
+
+        $worksheet.Range("A1").Value2 = 150
+        $inactiveWorksheet.Range("A1").Value2 = 20
+        $excel.Calculation = -4105
         $excel.CalculateFull()
+        Start-Sleep -Seconds 2
 
         Assert-True (
-            [double]$resultCell.Value2 -eq 200
-        ) "Excel calculates Tibetan-displayed numeric cells"
+            [double]$sumResult.Value2 -eq 225
+        ) "Excel calculates SUM from Tibetan-displayed numeric cells"
         Assert-True (
-            $numberCells.Font.Name -eq "TCRC Youtso Unicode"
-        ) "Excel applies the Tibetan number display font"
+            [double]$averageResult.Value2 -eq 25
+        ) "Excel calculates AVERAGE from Tibetan-displayed numeric cells"
+        Assert-True (
+            $sumResult.Font.Name -eq "TCRC Youtso Unicode"
+        ) "SUM result automatically uses TCRC Youtso Unicode"
+        Assert-True (
+            $averageResult.Font.Name -eq "TCRC Youtso Unicode"
+        ) "Inactive-sheet AVERAGE result automatically uses TCRC"
     }
     finally {
+        if ($null -ne $keyboardForExcel) {
+            Stop-TcrcProcesses
+        }
         if ($null -ne $workbook) {
             $workbook.Close($false)
         }
@@ -314,8 +378,12 @@ try {
         }
 
         foreach ($comObject in @(
-            $resultCell,
-            $numberCells,
+            $wscriptShell,
+            $averageResult,
+            $averageInputs,
+            $sumResult,
+            $sumInputs,
+            $inactiveWorksheet,
             $worksheet,
             $workbook,
             $excel

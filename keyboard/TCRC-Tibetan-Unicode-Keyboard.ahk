@@ -14,6 +14,7 @@ global ExcelNumberFont := "TCRC Youtso Unicode"
 global FontAppliedWindow := 0
 global ExcelEventApplication := 0
 global ExcelEventSink := 0
+global PendingExcelFormulaSheets := Map()
 
 global IconOn := A_ScriptDir "\tcrc_on.ico"
 global IconOff := A_ScriptDir "\tcrc_off.ico"
@@ -120,6 +121,7 @@ ConnectExcelEvents(excel) {
 
 DisconnectExcelEvents() {
     global ExcelEventApplication, ExcelEventSink
+    global PendingExcelFormulaSheets
 
     if IsObject(ExcelEventApplication) {
         try ComObjConnect(ExcelEventApplication)
@@ -128,18 +130,7 @@ DisconnectExcelEvents() {
     }
     ExcelEventApplication := 0
     ExcelEventSink := 0
-}
-
-FormatExcelFormulaTarget(target) {
-    global TibOn, UnicodeFont
-
-    if !TibOn
-        return
-    try {
-        if target.HasFormula
-            target.Font.Name := UnicodeFont
-    } catch {
-    }
+    PendingExcelFormulaSheets := Map()
 }
 
 FormatExcelFormulaCells(sheet) {
@@ -150,19 +141,54 @@ FormatExcelFormulaCells(sheet) {
     try {
         ; -4123 is Excel's xlCellTypeFormulas constant.
         formulaCells := sheet.UsedRange.SpecialCells(-4123)
+        try {
+            if (formulaCells.Font.Name = UnicodeFont)
+                return
+        }
         formulaCells.Font.Name := UnicodeFont
     } catch {
         ; A sheet without formulas raises an exception from SpecialCells.
     }
 }
 
+QueueExcelFormulaSheet(sheet) {
+    global TibOn, PendingExcelFormulaSheets
+
+    if !TibOn
+        return
+    try {
+        key := sheet.Parent.Name "|" sheet.CodeName
+        PendingExcelFormulaSheets[key] := sheet
+    } catch {
+        ; Chart sheets do not expose the worksheet properties used here.
+    }
+}
+
+FormatPendingExcelFormulaSheets() {
+    global TibOn, PendingExcelFormulaSheets
+
+    queuedSheets := PendingExcelFormulaSheets
+    PendingExcelFormulaSheets := Map()
+    if !TibOn
+        return
+    for _, sheet in queuedSheets
+        FormatExcelFormulaCells(sheet)
+}
+
 class ExcelApplicationEvents {
     SheetChange(sheet, target, excel) {
-        FormatExcelFormulaTarget(target)
+        ; A committed value or formula keeps the same font as Tibetan input.
+        StampUnicodeFontOnRange(target)
     }
 
     SheetCalculate(sheet, excel) {
-        FormatExcelFormulaCells(sheet)
+        QueueExcelFormulaSheet(sheet)
+    }
+
+    AfterCalculate(excel) {
+        ; Apply the font after all synchronous and asynchronous calculation
+        ; work is complete, including formulas on inactive worksheets.
+        FormatPendingExcelFormulaSheets()
     }
 
     SheetSelectionChange(sheet, target, excel) {

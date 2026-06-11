@@ -15,7 +15,7 @@ CONVERTER_PATH = REPO_ROOT / "converter" / "convert_docx.py"
 AHK_PATH = REPO_ROOT / "keyboard" / "TCRC-Tibetan-Unicode-Keyboard.ahk"
 GUI_PATH = REPO_ROOT / "converter" / "TCRC-Document-Converter.ahk"
 CONTROLLER_PATH = REPO_ROOT / "converter" / "convert-document.ps1"
-EXCEL_FONT_PATH = REPO_ROOT / "fonts" / "TCRC-Youtso-Excel-Numbers.ttf"
+MAIN_FONT_PATH = REPO_ROOT / "fonts" / "TCRC-Youtso-Unicode-fixed.ttf"
 
 spec = importlib.util.spec_from_file_location("convert_docx", CONVERTER_PATH)
 converter = importlib.util.module_from_spec(spec)
@@ -137,11 +137,13 @@ class ConverterTests(unittest.TestCase):
 
         self.assertIn("^!n::FormatExcelNumberCells()", ahk_text)
         self.assertIn('WinActive("ahk_exe EXCEL.EXE")', ahk_text)
-        self.assertIn("TCRC Youtso Excel Numbers", ahk_text)
+        self.assertIn("TCRC Youtso Unicode", ahk_text)
         self.assertIn('TypeDigit("1", 0x0F21)', ahk_text)
 
-    def test_excel_number_font_keeps_numeric_character_codes(self):
-        font = TTFont(EXCEL_FONT_PATH)
+    def test_main_font_draws_ascii_digits_as_tibetan(self):
+        # one merged font: typing or storing 0-9 keeps the real numeric
+        # characters, but the glyphs drawn are the Tibetan numerals
+        font = TTFont(MAIN_FONT_PATH)
         cmap = font.getBestCmap()
 
         for digit in range(10):
@@ -151,16 +153,6 @@ class ConverterTests(unittest.TestCase):
                 cmap[ascii_codepoint],
                 cmap[tibetan_codepoint],
             )
-
-        family_names = {
-            name.toUnicode()
-            for name in font["name"].names
-            if name.nameID == 1
-        }
-        self.assertEqual(
-            family_names,
-            {"TCRC Youtso Excel Numbers"},
-        )
 
     def test_converter_ui_is_explicit_and_preserves_the_source(self):
         gui_text = GUI_PATH.read_text(encoding="utf-8")

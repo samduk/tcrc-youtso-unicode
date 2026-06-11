@@ -9,7 +9,7 @@ global TibOn := true
 global LinkPending := false
 global PrevChar := ""
 global LastChar := ""
-global ExcelNumberFont := "TCRC Youtso Excel Numbers"
+global ExcelNumberFont := "TCRC Youtso Unicode"
 
 global IconOn := A_ScriptDir "\tcrc_on.ico"
 global IconOff := A_ScriptDir "\tcrc_off.ico"
@@ -55,7 +55,7 @@ FormatExcelNumberCells(*) {
         MsgBox(
             "Open Microsoft Excel and select the cells first.`n`n"
                 . "Then press Ctrl+Alt+N again.",
-            "TCRC Excel Numbers",
+            "TCRC Tibetan Numbers",
             "Iconi"
         )
         return
@@ -69,7 +69,7 @@ FormatExcelNumberCells(*) {
         MsgBox(
             "The selected Excel cells could not be formatted.`n`n"
                 . "Select normal worksheet cells and try again.",
-            "TCRC Excel Numbers",
+            "TCRC Tibetan Numbers",
             "Iconx"
         )
         return
@@ -79,7 +79,7 @@ FormatExcelNumberCells(*) {
         "The selected cells are ready.`n`n"
             . "Type numbers normally. They will look Tibetan, "
             . "but Excel will keep them as real numbers for formulas.",
-        "TCRC Excel Numbers",
+        "TCRC Tibetan Numbers",
         "Iconi"
     )
 }

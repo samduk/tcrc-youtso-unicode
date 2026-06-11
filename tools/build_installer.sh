@@ -22,9 +22,7 @@ mkdir -p "$STAGE"
 
 cp installer/installer.nsi installer/tcrc_on.ico installer/tcrc_off.ico \
     "$STAGE/"
-cp fonts/TCRC-Youtso-Unicode-fixed.ttf \
-    fonts/TCRC-Youtso-Excel-Numbers.ttf \
-    "$STAGE/"
+cp fonts/TCRC-Youtso-Unicode-fixed.ttf "$STAGE/"
 cp keyboard/TCRC-Tibetan-Unicode-Keyboard.ahk "$STAGE/"
 cp converter/TCRC-Document-Converter.ahk \
     converter/convert-document.ps1 \

@@ -87,17 +87,11 @@ Section "Install"
   ; Install and notify Windows about the font.
   SetOutPath "$FONTS"
   File "TCRC-Youtso-Unicode-fixed.ttf"
-  File "TCRC-Youtso-Excel-Numbers.ttf"
   WriteRegStr HKLM \
     "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" \
     "TCRC Youtso Unicode (TrueType)" \
     "TCRC-Youtso-Unicode-fixed.ttf"
-  WriteRegStr HKLM \
-    "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" \
-    "TCRC Youtso Excel Numbers (TrueType)" \
-    "TCRC-Youtso-Excel-Numbers.ttf"
   System::Call 'gdi32::AddFontResource(t "$FONTS\TCRC-Youtso-Unicode-fixed.ttf") i.r0'
-  System::Call 'gdi32::AddFontResource(t "$FONTS\TCRC-Youtso-Excel-Numbers.ttf") i.r0'
   SendMessage ${HWND_BROADCAST} ${WM_FONTCHANGE} 0 0 /TIMEOUT=5000
 
   ; Undo the global Microsoft Himalaya substitution written by old releases.
@@ -282,13 +276,14 @@ Section "Uninstall"
   DeleteRegValue HKLM \
     "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" \
     "TCRC Youtso Unicode (TrueType)"
+  System::Call 'gdi32::RemoveFontResource(t "$FONTS\TCRC-Youtso-Unicode-fixed.ttf")'
+  SendMessage ${HWND_BROADCAST} ${WM_FONTCHANGE} 0 0 /TIMEOUT=5000
+  Delete /REBOOTOK "$FONTS\TCRC-Youtso-Unicode-fixed.ttf"
+
+  ; clean up the retired Excel Numbers font from older installations
   DeleteRegValue HKLM \
     "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" \
     "TCRC Youtso Excel Numbers (TrueType)"
-  System::Call 'gdi32::RemoveFontResource(t "$FONTS\TCRC-Youtso-Unicode-fixed.ttf")'
-  System::Call 'gdi32::RemoveFontResource(t "$FONTS\TCRC-Youtso-Excel-Numbers.ttf")'
-  SendMessage ${HWND_BROADCAST} ${WM_FONTCHANGE} 0 0 /TIMEOUT=5000
-  Delete /REBOOTOK "$FONTS\TCRC-Youtso-Unicode-fixed.ttf"
   Delete /REBOOTOK "$FONTS\TCRC-Youtso-Excel-Numbers.ttf"
 
   RMDir /r /REBOOTOK "$INSTDIR"

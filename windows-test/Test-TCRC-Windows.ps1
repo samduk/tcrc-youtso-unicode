@@ -24,7 +24,6 @@ $fontFile = Join-Path `
     "Fonts\TCRC-Youtso-Unicode-fixed.ttf"
 $excelNumberFontFile = Join-Path `
     $env:WINDIR `
-    "Fonts\TCRC-Youtso-Excel-Numbers.ttf"
 $uninstaller = Join-Path $installFolder "uninstall.exe"
 
 $startMenuConverter = Join-Path $env:ProgramData `
@@ -134,13 +133,6 @@ try {
         $fontRegistration -eq "TCRC-Youtso-Unicode-fixed.ttf"
     ) "Unicode font is registered with Windows"
 
-    $excelFontRegistration = Get-ItemPropertyValue `
-        -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts" `
-        -Name "TCRC Youtso Excel Numbers (TrueType)"
-    Assert-True (
-        $excelFontRegistration -eq "TCRC-Youtso-Excel-Numbers.ttf"
-    ) "Excel number font is registered with Windows"
-
     $fontSubstitute = Get-ItemPropertyValue `
         -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\FontSubstitutes" `
         -Name "Microsoft Himalaya" `
@@ -248,14 +240,14 @@ try {
         $worksheet.Range("A1").Value2 = 125
         $worksheet.Range("A2").Value2 = 75
         $resultCell.Formula = "=SUM(A1:A2)"
-        $numberCells.Font.Name = "TCRC Youtso Excel Numbers"
+        $numberCells.Font.Name = "TCRC Youtso Unicode"
         $excel.CalculateFull()
 
         Assert-True (
             [double]$resultCell.Value2 -eq 200
         ) "Excel calculates Tibetan-displayed numeric cells"
         Assert-True (
-            $numberCells.Font.Name -eq "TCRC Youtso Excel Numbers"
+            $numberCells.Font.Name -eq "TCRC Youtso Unicode"
         ) "Excel applies the Tibetan number display font"
     }
     finally {

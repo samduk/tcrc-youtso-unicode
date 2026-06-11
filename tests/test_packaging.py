@@ -14,7 +14,6 @@ class PackagingTests(unittest.TestCase):
         self.assertNotIn("taskkill /F /IM AutoHotkey64.exe", installer)
         self.assertIn("TCRC-Tibetan-Keyboard.exe", installer)
         self.assertIn("TCRC-Document-Converter.exe", installer)
-        self.assertIn("TCRC-Youtso-Excel-Numbers.ttf", installer)
 
     def test_installer_does_not_write_a_font_substitute(self):
         installer = (REPO_ROOT / "installer" / "installer.nsi").read_text(

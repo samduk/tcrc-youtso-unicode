@@ -47,7 +47,6 @@ files from accidentally remaining inside a later installer.
 | Component | Purpose |
 |---|---|
 | `fonts/TCRC-Youtso-Unicode-fixed.ttf` | repaired Unicode font |
-| `fonts/TCRC-Youtso-Excel-Numbers.ttf` | numeric Excel display font |
 | `keyboard/TCRC-Tibetan-Unicode-Keyboard.ahk` | system-wide keyboard |
 | `converter/TCRC-Document-Converter.ahk` | visible Windows converter UI |
 | `converter/convert-document.ps1` | Office conversion controller |

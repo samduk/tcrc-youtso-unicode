@@ -14,7 +14,6 @@ Download **`TCRC-Youtso-Unicode-Setup.exe`** from the
 The installer adds:
 
 - the **TCRC Youtso Unicode** font;
-- the **TCRC Youtso Excel Numbers** display font;
 - the familiar TCRC Tibetan keyboard;
 - a **TCRC Document Converter** shortcut on the desktop;
 - an uninstaller in Windows Settings.

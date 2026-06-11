@@ -41,9 +41,9 @@ class PackagingTests(unittest.TestCase):
             REPO_ROOT / "tools" / "build_installer.sh"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('!define APPVERSION "1.4.2"', installer)
-        self.assertIn('VIProductVersion "1.4.2.0"', installer)
-        self.assertTrue(release_notes.startswith("TCRC Youtso Unicode 1.4.2"))
+        self.assertIn('!define APPVERSION "1.4.3"', installer)
+        self.assertIn('VIProductVersion "1.4.3.0"', installer)
+        self.assertTrue(release_notes.startswith("TCRC Youtso Unicode 1.4.3"))
         self.assertIn('File "TCRC-Youtso-Unicode-fixed.ttf"', installer)
         self.assertNotIn('File "TCRC-Youtso-Excel-Numbers.ttf"', installer)
         self.assertNotIn("fonts/TCRC-Youtso-Excel-Numbers.ttf", build_script)
@@ -63,9 +63,19 @@ class PackagingTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn('$sumResult.Font.Name = "Arial"', windows_test)
+        self.assertIn('$secondSumResult.Font.Name = "Arial"', windows_test)
+        self.assertIn('$sheetAverageResult.Font.Name = "Arial"', windows_test)
         self.assertIn('$averageResult.Font.Name = "Arial"', windows_test)
         self.assertIn(
             '$sumResult.Font.Name -eq "TCRC Youtso Unicode"',
+            windows_test,
+        )
+        self.assertIn(
+            '$secondSumResult.Font.Name -eq "TCRC Youtso Unicode"',
+            windows_test,
+        )
+        self.assertIn(
+            '$sheetAverageResult.Font.Name -eq "TCRC Youtso Unicode"',
             windows_test,
         )
         self.assertIn(

@@ -158,10 +158,17 @@ class ConverterTests(unittest.TestCase):
         self.assertIn("DisconnectExcelEvents()", ahk_text)
         self.assertIn("sheet.UsedRange.SpecialCells(-4123)", ahk_text)
         self.assertIn(
-            "if (formulaCells.Font.Name = UnicodeFont)\n"
-            "                return",
+            "areas := formulaCells.Areas\n"
+            "        Loop areas.Count {\n"
+            "            area := areas.Item(A_Index)",
             ahk_text,
         )
+        self.assertIn(
+            "if (area.Font.Name != UnicodeFont)\n"
+            "                    area.Font.Name := UnicodeFont",
+            ahk_text,
+        )
+        self.assertNotIn("formulaCells.Font.Name", ahk_text)
         self.assertNotIn('Styles("Normal").Font.Name', ahk_text)
         self.assertIn(
             'if WinActive("ahk_exe EXCEL.EXE") {\n'
@@ -175,7 +182,7 @@ class ConverterTests(unittest.TestCase):
         self.assertNotIn("SetTimer", ahk_text)
         self.assertNotIn("LegacyMap", ahk_text)
         self.assertNotIn("convert-docx.ps1", ahk_text)
-        self.assertLess(len(ahk_text.splitlines()), 450)
+        self.assertLess(len(ahk_text.splitlines()), 475)
 
     def test_excel_number_mode_is_explicit(self):
         ahk_text = AHK_PATH.read_text(encoding="utf-8")

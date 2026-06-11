@@ -1,10 +1,12 @@
-TCRC Youtso Unicode 1.4.2
+TCRC Youtso Unicode 1.4.3
 =========================
 
 - Moving between Excel cells with Tab, Enter, arrow keys, or the mouse now
   keeps TCRC Youtso Unicode active until Tibetan typing is turned off.
 - SUM, AVERAGE, AutoSum, and other formula result cells now switch to TCRC
   Youtso Unicode after Excel finishes recalculating active or inactive sheets.
+- Formula results separated across different rows and columns are formatted
+  individually instead of only formatting the first result area.
 - The digits 0-9 in the font are now narrow Tibetan numerals with the same
   width as western digits: number columns sized before the change no longer
   overflow into "######".

@@ -141,11 +141,16 @@ FormatExcelFormulaCells(sheet) {
     try {
         ; -4123 is Excel's xlCellTypeFormulas constant.
         formulaCells := sheet.UsedRange.SpecialCells(-4123)
-        try {
-            if (formulaCells.Font.Name = UnicodeFont)
-                return
+        areas := formulaCells.Areas
+        Loop areas.Count {
+            area := areas.Item(A_Index)
+            try {
+                if (area.Font.Name != UnicodeFont)
+                    area.Font.Name := UnicodeFont
+            } catch {
+                try area.Font.Name := UnicodeFont
+            }
         }
-        formulaCells.Font.Name := UnicodeFont
     } catch {
         ; A sheet without formulas raises an exception from SpecialCells.
     }

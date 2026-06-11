@@ -298,6 +298,10 @@ try {
     $inactiveWorksheet = $null
     $sumInputs = $null
     $sumResult = $null
+    $secondSumInputs = $null
+    $secondSumResult = $null
+    $sheetAverageInputs = $null
+    $sheetAverageResult = $null
     $averageInputs = $null
     $averageResult = $null
     $keyboardForExcel = $null
@@ -312,19 +316,35 @@ try {
         $worksheet = $workbook.Worksheets.Item(1)
         $inactiveWorksheet = $workbook.Worksheets.Add()
         $sumInputs = $worksheet.Range("A1:A2")
-        $sumResult = $worksheet.Range("A3")
+        $sumResult = $worksheet.Range("A4")
+        $secondSumInputs = $worksheet.Range("B1:B3")
+        $secondSumResult = $worksheet.Range("B5")
+        $sheetAverageInputs = $worksheet.Range("C1:C3")
+        $sheetAverageResult = $worksheet.Range("C4")
         $averageInputs = $inactiveWorksheet.Range("A1:A2")
         $averageResult = $inactiveWorksheet.Range("A3")
 
         $worksheet.Range("A1").Value2 = 125
         $worksheet.Range("A2").Value2 = 75
         $sumResult.Formula = "=SUM(A1:A2)"
+        $worksheet.Range("B1").Value2 = 100
+        $worksheet.Range("B2").Value2 = 200
+        $worksheet.Range("B3").Value2 = 300
+        $secondSumResult.Formula = "=SUM(B1:B3)"
+        $worksheet.Range("C1").Value2 = 70
+        $worksheet.Range("C2").Value2 = 130
+        $worksheet.Range("C3").Value2 = 450
+        $sheetAverageResult.Formula = "=AVERAGE(C1:C3)"
         $inactiveWorksheet.Range("A1").Value2 = 10
         $inactiveWorksheet.Range("A2").Value2 = 30
         $averageResult.Formula = "=AVERAGE(A1:A2)"
         $sumInputs.Font.Name = "TCRC Youtso Unicode"
+        $secondSumInputs.Font.Name = "TCRC Youtso Unicode"
+        $sheetAverageInputs.Font.Name = "TCRC Youtso Unicode"
         $averageInputs.Font.Name = "TCRC Youtso Unicode"
         $sumResult.Font.Name = "Arial"
+        $secondSumResult.Font.Name = "Arial"
+        $sheetAverageResult.Font.Name = "Arial"
         $averageResult.Font.Name = "Arial"
         $worksheet.Activate()
 
@@ -357,11 +377,25 @@ try {
             [double]$sumResult.Value2 -eq 225
         ) "Excel calculates SUM from Tibetan-displayed numeric cells"
         Assert-True (
+            [double]$secondSumResult.Value2 -eq 600
+        ) "Excel calculates a second scattered SUM result"
+        Assert-True (
+            [math]::Abs(
+                [double]$sheetAverageResult.Value2 - (650 / 3)
+            ) -lt 0.000001
+        ) "Excel calculates a scattered AVERAGE result"
+        Assert-True (
             [double]$averageResult.Value2 -eq 25
         ) "Excel calculates AVERAGE from Tibetan-displayed numeric cells"
         Assert-True (
             $sumResult.Font.Name -eq "TCRC Youtso Unicode"
-        ) "SUM result automatically uses TCRC Youtso Unicode"
+        ) "First formula area automatically uses TCRC Youtso Unicode"
+        Assert-True (
+            $secondSumResult.Font.Name -eq "TCRC Youtso Unicode"
+        ) "Second formula area automatically uses TCRC Youtso Unicode"
+        Assert-True (
+            $sheetAverageResult.Font.Name -eq "TCRC Youtso Unicode"
+        ) "Third formula area automatically uses TCRC Youtso Unicode"
         Assert-True (
             $averageResult.Font.Name -eq "TCRC Youtso Unicode"
         ) "Inactive-sheet AVERAGE result automatically uses TCRC"
@@ -381,6 +415,10 @@ try {
             $wscriptShell,
             $averageResult,
             $averageInputs,
+            $sheetAverageResult,
+            $sheetAverageInputs,
+            $secondSumResult,
+            $secondSumInputs,
             $sumResult,
             $sumInputs,
             $inactiveWorksheet,

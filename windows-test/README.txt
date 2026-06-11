@@ -21,7 +21,8 @@ The test verifies:
 - conversion of a generated legacy test document to expected Unicode Tibetan;
 - opening the Unicode result in Microsoft Word;
 - SUM and AVERAGE calculation and automatic TCRC result fonts in active and
-  inactive Microsoft Excel worksheets;
+  inactive Microsoft Excel worksheets, including results scattered across
+  different rows and columns;
 - startup of the visible converter window.
 
 Manual check

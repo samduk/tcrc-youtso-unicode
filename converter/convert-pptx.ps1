@@ -26,10 +26,8 @@ foreach ($property in $json.PSObject.Properties) {
 $legacyFonts = @("TCRC Bod-Yig", "TCRC Youtsoweb", "TCRC Youtso")
 $replacementFont = "TCRC Youtso Unicode"
 
-# DrawingML: a run is <a:r>...</a:r>, its text is <a:t>...</a:t>
-$runPattern = [regex]'(?s)<a:r\b[^>]*>.*?</a:r>'
-$textPattern = [regex]'(?s)(<a:t(?:\s[^>]*)?>)(.*?)(</a:t>)'
 $partPattern = [regex]'^ppt/(slides|slideLayouts|slideMasters|notesSlides|notesMasters)/[^/]+\.xml$'
+$drawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main"
 
 function Convert-LegacyText([string]$text) {
     $builder = New-Object System.Text.StringBuilder
@@ -44,62 +42,127 @@ function Convert-LegacyText([string]$text) {
     return $builder.ToString().Normalize([Text.NormalizationForm]::FormC)
 }
 
-function Test-RunNeedsConversion([string]$runXml) {
-    foreach ($fontName in $legacyFonts) {
-        if ($runXml.Contains('typeface="' + $fontName + '"')) { return $true }
-    }
-    # re-fonted legacy text: new font name, legacy characters inside.
-    # Only 0xA0-0xFF characters are PROOF of legacy text (an em-dash
-    # appears in normal English too and must not trigger).
-    if ($runXml.Contains('typeface="' + $replacementFont + '"')) {
-        foreach ($textMatch in $textPattern.Matches($runXml)) {
-            $plainText = [System.Net.WebUtility]::HtmlDecode($textMatch.Groups[2].Value)
-            foreach ($character in $plainText.ToCharArray()) {
-                $code = [int]$character
-                if (($code -ge 0xA0) -and ($code -le 0xFF) -and $table.ContainsKey($code)) {
-                    return $true
-                }
-            }
+function Test-TextHasLegacySignature([string]$text) {
+    foreach ($character in $text.ToCharArray()) {
+        $code = [int]$character
+        if (($code -ge 0xA0) -and ($code -le 0xFF) -and $table.ContainsKey($code)) {
+            return $true
         }
     }
     return $false
 }
 
-function Convert-Run([string]$runXml) {
-    $builder = New-Object System.Text.StringBuilder
-    $position = 0
-    foreach ($match in $textPattern.Matches($runXml)) {
-        [void]$builder.Append($runXml.Substring($position, $match.Index - $position))
-        $plainText = [System.Net.WebUtility]::HtmlDecode($match.Groups[2].Value)
-        $unicodeText = Convert-LegacyText $plainText
-        $safeText = $unicodeText.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
-        [void]$builder.Append($match.Groups[1].Value + $safeText + $match.Groups[3].Value)
-        $position = $match.Index + $match.Length
+function Test-TextLooksLegacyWithoutFont([string]$text) {
+    $mappedHighCharacters = 0
+    $nonSpaceLength = 0
+    foreach ($character in $text.ToCharArray()) {
+        $code = [int]$character
+        if (-not [char]::IsWhiteSpace($character)) {
+            $nonSpaceLength++
+        }
+        if (($code -ge 0xA0) -and ($code -le 0xFF) -and $table.ContainsKey($code)) {
+            $mappedHighCharacters++
+        }
     }
-    [void]$builder.Append($runXml.Substring($position))
-    return $builder.ToString()
+    return (
+        $mappedHighCharacters -ge 2 -and
+        ($mappedHighCharacters * 2) -ge [Math]::Max($nonSpaceLength, 1)
+    )
+}
+
+function Get-DrawingFont($properties, $namespaceManager) {
+    if ($null -eq $properties) { return $null }
+    foreach ($elementName in @("latin", "cs", "ea")) {
+        $fontNode = $properties.SelectSingleNode("a:" + $elementName, $namespaceManager)
+        if ($null -ne $fontNode -and $fontNode.HasAttribute("typeface")) {
+            return $fontNode.GetAttribute("typeface")
+        }
+    }
+    return $null
 }
 
 function Convert-PartXml([string]$xml) {
-    $builder = New-Object System.Text.StringBuilder
-    $position = 0
-    foreach ($match in $runPattern.Matches($xml)) {
-        [void]$builder.Append($xml.Substring($position, $match.Index - $position))
-        $run = $match.Value
-        if (Test-RunNeedsConversion $run) {
-            $run = Convert-Run $run
-        }
-        [void]$builder.Append($run)
-        $position = $match.Index + $match.Length
-    }
-    [void]$builder.Append($xml.Substring($position))
-    $result = $builder.ToString()
+    $document = New-Object System.Xml.XmlDocument
+    $document.PreserveWhitespace = $true
+    $document.LoadXml($xml)
+    $namespaceManager = New-Object System.Xml.XmlNamespaceManager($document.NameTable)
+    $namespaceManager.AddNamespace("a", $drawingNamespace)
 
-    foreach ($fontName in $legacyFonts) {
-        $result = $result.Replace('typeface="' + $fontName + '"',
-                                  'typeface="' + $replacementFont + '"')
+    foreach ($paragraph in $document.SelectNodes("//a:p", $namespaceManager)) {
+        $paragraphProperties = $paragraph.SelectSingleNode("a:pPr", $namespaceManager)
+        $inheritedFont = $null
+        $level = 0
+        if ($null -ne $paragraphProperties) {
+            $inheritedFont = Get-DrawingFont `
+                ($paragraphProperties.SelectSingleNode("a:defRPr", $namespaceManager)) `
+                $namespaceManager
+            if ($paragraphProperties.HasAttribute("lvl")) {
+                [void][int]::TryParse(
+                    $paragraphProperties.GetAttribute("lvl"),
+                    [ref]$level
+                )
+            }
+        }
+
+        if ([string]::IsNullOrWhiteSpace($inheritedFont)) {
+            $textBody = $paragraph.ParentNode
+            while ($null -ne $textBody -and $textBody.LocalName -ne "txBody") {
+                $textBody = $textBody.ParentNode
+            }
+            if ($null -ne $textBody) {
+                $levelProperties = $textBody.SelectSingleNode(
+                    "a:lstStyle/a:lvl" + ($level + 1) + "pPr",
+                    $namespaceManager
+                )
+                if ($null -ne $levelProperties) {
+                    $inheritedFont = Get-DrawingFont `
+                        ($levelProperties.SelectSingleNode("a:defRPr", $namespaceManager)) `
+                        $namespaceManager
+                }
+            }
+        }
+
+        foreach ($run in $paragraph.SelectNodes("a:r", $namespaceManager)) {
+            $runFont = Get-DrawingFont `
+                ($run.SelectSingleNode("a:rPr", $namespaceManager)) `
+                $namespaceManager
+            if ([string]::IsNullOrWhiteSpace($runFont)) {
+                $runFont = $inheritedFont
+            }
+
+            $textNodes = $run.SelectNodes("a:t", $namespaceManager)
+            $runText = ""
+            foreach ($textNode in $textNodes) {
+                $runText += $textNode.InnerText
+            }
+
+            $shouldConvert = $legacyFonts -contains $runFont
+            if (
+                $runFont -eq $replacementFont -and
+                (Test-TextHasLegacySignature $runText)
+            ) {
+                $shouldConvert = $true
+            }
+            if (
+                [string]::IsNullOrWhiteSpace($runFont) -and
+                (Test-TextLooksLegacyWithoutFont $runText)
+            ) {
+                $shouldConvert = $true
+            }
+            if ($shouldConvert) {
+                foreach ($textNode in $textNodes) {
+                    $textNode.InnerText = Convert-LegacyText $textNode.InnerText
+                }
+            }
+        }
     }
-    return $result
+
+    foreach ($fontNode in $document.SelectNodes("//*[@typeface]")) {
+        if ($legacyFonts -contains $fontNode.GetAttribute("typeface")) {
+            $fontNode.SetAttribute("typeface", $replacementFont)
+        }
+    }
+    return $document.OuterXml
 }
 
 function Update-ZipEntry($zip, [string]$entryName, [string]$newContent) {

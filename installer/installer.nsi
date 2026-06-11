@@ -2,7 +2,7 @@ Unicode true
 !include "MUI2.nsh"
 
 !define APPNAME "TCRC Youtso Unicode"
-!define APPVERSION "1.2.0"
+!define APPVERSION "1.3.0"
 !define REGUN "Software\Microsoft\Windows\CurrentVersion\Uninstall\TCRCTibetanUnicode"
 !ifndef WM_FONTCHANGE
   !define WM_FONTCHANGE 0x001D
@@ -21,7 +21,7 @@ BrandingText "${APPNAME}"
 
 Icon "tcrc_on.ico"
 UninstallIcon "tcrc_off.ico"
-VIProductVersion "1.2.0.0"
+VIProductVersion "1.3.0.0"
 VIAddVersionKey "ProductName" "${APPNAME}"
 VIAddVersionKey "FileDescription" "${APPNAME} Setup"
 VIAddVersionKey "FileVersion" "${APPVERSION}"
@@ -33,7 +33,7 @@ VIAddVersionKey "LegalCopyright" "TCRC typeface; Unicode repair by Samdup"
 !define MUI_ICON "tcrc_on.ico"
 !define MUI_UNICON "tcrc_off.ico"
 !define MUI_FINISHPAGE_TEXT \
-  "TCRC Youtso Unicode is ready.$\r$\n$\r$\nUse the desktop shortcut to convert old Word documents. Tibetan typing starts automatically. In Excel, select number cells and press Ctrl+Alt+N."
+  "TCRC Youtso Unicode is ready.$\r$\n$\r$\nUse the desktop shortcut to convert old Word, PowerPoint, and Excel documents. Tibetan typing starts automatically. In Excel, select number cells and press Ctrl+Alt+N."
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Open TCRC Document Converter"
 !define MUI_FINISHPAGE_RUN_FUNCTION LaunchConverter

@@ -15,7 +15,7 @@ that the file came from the official project release before selecting
 
 1. Double-click **TCRC Document Converter** on the desktop.
 2. Select **Choose file**.
-3. Choose an old `.doc` or `.docx` file.
+3. Choose an old Word, PowerPoint, or Excel file.
 4. Select **Convert to Unicode**.
 
 You can also drag the document onto the converter window.
@@ -23,17 +23,19 @@ You can also drag the document onto the converter window.
 The new file is saved next to the original:
 
 ```text
-Original name (Unicode).docx
+Original name (Unicode).<modern Office extension>
 ```
 
-The original file is never changed. Old `.doc` files require Microsoft Word
-to be installed because Word is used to open the older binary format.
+The original file is never changed. Supported formats are `.doc`, `.docx`,
+`.ppt`, `.pptx`, `.xls`, and `.xlsx`. Old binary files require their matching
+Microsoft Office application: Word for `.doc`, PowerPoint for `.ppt`, and
+Excel for `.xls`.
 
 ### Right-click conversion
 
 On Windows 11:
 
-1. Right-click the Word document.
+1. Right-click the Word, PowerPoint, or Excel file.
 2. Select **Show more options**.
 3. Select **Convert TCRC document to Unicode**.
 4. Confirm the file in the converter window.
@@ -120,9 +122,10 @@ The exact labels can differ between Photoshop versions.
 
 ### Conversion failed
 
-- Close the source and output documents in Word, then try again.
-- Confirm that the file is a `.doc` or `.docx` Word document.
-- For an old `.doc` file, confirm that Microsoft Word is installed.
+- Close the source and output files in Microsoft Office, then try again.
+- Confirm that the file uses a supported Office extension.
+- For `.doc`, `.ppt`, or `.xls`, confirm that the matching Office application
+  is installed.
 - Do not select a file that already ends with ` (Unicode)`.
 
 ### The converter shortcut is missing
@@ -156,16 +159,7 @@ bar should show ordinary digits even though the worksheet shows Tibetan digits.
 Open **Settings > Apps > Installed apps**, find **TCRC Youtso Unicode**, and
 select **Uninstall**.
 
-## Converting PowerPoint and Excel files
-
-The TCRC Document Converter (Start Menu or desktop shortcut) accepts
-Word, PowerPoint, and Excel files: .doc, .docx, .ppt, .pptx, .xls, .xlsx.
-You can also right-click any of these files and choose
-"Convert TCRC document to Unicode".
-
-The result is always a new file "name (Unicode)..." next to the original;
-old binary formats (.doc/.ppt/.xls) come out in the modern format.
-Originals are never modified.
+## Batch conversion from the command line
 
 Command line (Python) versions for batch work:
 
@@ -185,7 +179,7 @@ Two scripts are installed in the application folder's "adobe" subfolder
                folder (Window > Utilities > Scripts > right-click User >
                Reveal), then double-click it in the Scripts panel.
 
-The scripts convert every legacy text layer/frame/story to Unicode and
-switch the font to TCRC Youtso Unicode. Always run them on a COPY of
-your file first. Photoshop additionally needs the World-Ready text
-engine enabled (see the Photoshop section above) for stacks to display.
+The scripts convert text using a legacy TCRC font, then switch it to
+TCRC Youtso Unicode. Always run them on a COPY of your file first.
+Photoshop additionally needs the World-Ready text engine enabled (see the
+Photoshop section above) for stacks to display.

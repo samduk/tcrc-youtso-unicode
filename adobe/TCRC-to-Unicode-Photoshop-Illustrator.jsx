@@ -25,20 +25,54 @@ function convertText(text) {
     return result;
 }
 
-// Only 0xA0-0xFF characters are PROOF of legacy text (an em-dash also
-// exists in normal English text and must not trigger a conversion).
+// Conservative fallback used only when Adobe does not expose a usable font.
 function looksLegacy(text) {
+    var mappedHighCharacters = 0;
+    var nonSpaceLength = 0;
     for (var i = 0; i < text.length; i++) {
         var code = text.charCodeAt(i);
+        if (!/\s/.test(text.charAt(i))) {
+            nonSpaceLength++;
+        }
         if (code >= 0xA0 && code <= 0xFF && MAP[code] !== undefined) {
+            mappedHighCharacters++;
+        }
+    }
+    return mappedHighCharacters >= 2 &&
+           mappedHighCharacters * 2 >= Math.max(nonSpaceLength, 1);
+}
+
+var UNICODE_FONT_POSTSCRIPT = "TCRCYoutsoUnicode";
+var LEGACY_FONT_NAMES = [
+    "TCRCBodYig",
+    "TCRCYoutsoweb",
+    "TCRCYoutso"
+];
+var convertedCount = 0;
+
+function normalizedFontName(name) {
+    return String(name || "").replace(/[\s_-]/g, "").toLowerCase();
+}
+
+function isLegacyFont(name) {
+    var normalized = normalizedFontName(name);
+    for (var i = 0; i < LEGACY_FONT_NAMES.length; i++) {
+        if (normalized === normalizedFontName(LEGACY_FONT_NAMES[i])) {
             return true;
         }
     }
     return false;
 }
 
-var UNICODE_FONT_POSTSCRIPT = "TCRCYoutsoUnicode";
-var convertedCount = 0;
+function shouldConvert(text, fontName) {
+    if (isLegacyFont(fontName)) {
+        return true;
+    }
+    if (normalizedFontName(fontName) === normalizedFontName(UNICODE_FONT_POSTSCRIPT)) {
+        return looksLegacy(text);
+    }
+    return !fontName && looksLegacy(text);
+}
 
 function convertPhotoshopLayer(layer) {
     if (layer.typename === "LayerSet") {
@@ -51,7 +85,9 @@ function convertPhotoshopLayer(layer) {
         return;
     }
     var item = layer.textItem;
-    if (!looksLegacy(item.contents)) {
+    var currentFont = "";
+    try { currentFont = item.font; } catch (e) { }
+    if (!shouldConvert(item.contents, currentFont)) {
         return;
     }
     item.contents = convertText(item.contents);
@@ -74,7 +110,11 @@ function runIllustrator() {
     // the ones inside groups
     for (var i = 0; i < doc.textFrames.length; i++) {
         var frame = doc.textFrames[i];
-        if (!looksLegacy(frame.contents)) {
+        var currentFont = "";
+        try {
+            currentFont = frame.textRange.characterAttributes.textFont.name;
+        } catch (e) { }
+        if (!shouldConvert(frame.contents, currentFont)) {
             continue;
         }
         frame.contents = convertText(frame.contents);

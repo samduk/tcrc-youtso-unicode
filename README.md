@@ -2,7 +2,7 @@
 
 TCRC Youtso Unicode brings the familiar TCRC Tibetan typeface and keyboard to
 modern Windows. It also includes a simple desktop application for converting
-old TCRC Word documents to Unicode.
+old TCRC Word, PowerPoint, and Excel documents to Unicode.
 
 [![CI](https://github.com/samduk/tcrc-youtso-unicode/actions/workflows/ci.yml/badge.svg)](https://github.com/samduk/tcrc-youtso-unicode/actions/workflows/ci.yml)
 
@@ -24,20 +24,20 @@ No Python, AutoHotkey, or separate font installation is required.
 ## Convert an old document
 
 1. Double-click **TCRC Document Converter** on the desktop.
-2. Choose an old `.doc` or `.docx` file.
+2. Choose an old Word, PowerPoint, or Excel file.
 3. Select **Convert to Unicode**.
 
 The converter creates a new file named:
 
 ```text
-Original name (Unicode).docx
+Original name (Unicode).<modern Office extension>
 ```
 
 The original document is never changed. The Unicode copy can use TCRC Youtso
 Unicode, Microsoft Himalaya, Monlam, or another Unicode Tibetan font.
 
-You can also drag a Word document onto the converter window. Windows 11 users
-can right-click a Word document, choose **Show more options**, and select
+You can also drag a supported Office file onto the converter window. Windows
+11 users can right-click the file, choose **Show more options**, and select
 **Convert TCRC document to Unicode**.
 
 ## Type Tibetan
@@ -71,7 +71,7 @@ calculations work.
 
 The application is intentionally conservative:
 
-- it does not monitor Microsoft Word in the background;
+- it does not monitor Microsoft Office applications in the background;
 - it does not replace Microsoft Himalaya or other system fonts;
 - it does not overwrite source documents;
 - document conversion starts only after the user selects a file.
@@ -82,7 +82,9 @@ The Windows-only package has these focused components:
 
 - `keyboard/TCRC-Tibetan-Unicode-Keyboard.ahk`: keyboard input only;
 - `converter/TCRC-Document-Converter.ahk`: visible converter interface;
-- `converter/convert-docx.ps1`: fast Open XML conversion engine.
+- `converter/convert-docx.ps1`: Word Open XML conversion engine;
+- `converter/convert-pptx.ps1`: PowerPoint Open XML conversion engine;
+- `converter/convert-xlsx.ps1`: Excel Open XML conversion engine.
 
 Run the converter tests:
 

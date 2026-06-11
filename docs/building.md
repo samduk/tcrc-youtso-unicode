@@ -50,8 +50,10 @@ files from accidentally remaining inside a later installer.
 | `fonts/TCRC-Youtso-Excel-Numbers.ttf` | numeric Excel display font |
 | `keyboard/TCRC-Tibetan-Unicode-Keyboard.ahk` | system-wide keyboard |
 | `converter/TCRC-Document-Converter.ahk` | visible Windows converter UI |
-| `converter/convert-document.ps1` | `.doc`/`.docx` conversion controller |
+| `converter/convert-document.ps1` | Office conversion controller |
 | `converter/convert-docx.ps1` | fast `.docx` Open XML conversion engine |
+| `converter/convert-pptx.ps1` | `.pptx` Open XML conversion engine |
+| `converter/convert-xlsx.ps1` | `.xlsx` Open XML conversion engine |
 | `installer/installer.nsi` | installer and uninstaller |
 
 The installed AutoHotkey runtime is product-local. Users do not install

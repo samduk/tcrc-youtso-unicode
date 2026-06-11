@@ -30,8 +30,7 @@ foreach ($property in $json.PSObject.Properties) {
 $legacyFonts = @("TCRC Bod-Yig", "TCRC Youtsoweb", "TCRC Youtso")
 $replacementFont = "TCRC Youtso Unicode"
 
-$runPattern = [regex]'(?s)<r\b[^>]*>.*?</r>'
-$textPattern = [regex]'(?s)(<t(?:\s[^>]*)?>)(.*?)(</t>)'
+$spreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 
 function Convert-LegacyText([string]$text) {
     $builder = New-Object System.Text.StringBuilder
@@ -46,10 +45,29 @@ function Convert-LegacyText([string]$text) {
     return $builder.ToString().Normalize([Text.NormalizationForm]::FormC)
 }
 
-function Test-TextIsLegacy([string]$plainText) {
-    # only 0xA0-0xFF characters are PROOF of legacy text; an em-dash etc.
-    # appears in normal English and must never trigger a conversion
-    foreach ($character in $plainText.ToCharArray()) {
+function Test-TextHasLegacySignature([string]$text) {
+    $mappedHighCharacters = 0
+    $nonSpaceLength = 0
+    foreach ($character in $text.ToCharArray()) {
+        $code = [int]$character
+        if (-not [char]::IsWhiteSpace($character)) {
+            $nonSpaceLength++
+        }
+        if (($code -ge 0xA0) -and ($code -le 0xFF) -and $table.ContainsKey($code)) {
+            $mappedHighCharacters++
+        }
+    }
+    return (
+        $mappedHighCharacters -ge 2 -and
+        ($mappedHighCharacters * 2) -ge [Math]::Max($nonSpaceLength, 1)
+    )
+}
+
+function Test-TextHasAnyLegacyCharacter([string]$text) {
+    # Used when the run's font is already TCRC Youtso Unicode: the text is
+    # known to be Tibetan, so a single leftover legacy character (a stray
+    # 1/4 sign from an earlier partial conversion) is enough proof.
+    foreach ($character in $text.ToCharArray()) {
         $code = [int]$character
         if (($code -ge 0xA0) -and ($code -le 0xFF) -and $table.ContainsKey($code)) {
             return $true
@@ -58,56 +76,146 @@ function Test-TextIsLegacy([string]$plainText) {
     return $false
 }
 
-function Convert-TextElement($match, [bool]$force) {
-    $plainText = [System.Net.WebUtility]::HtmlDecode($match.Groups[2].Value)
-    if (-not $force -and -not (Test-TextIsLegacy $plainText)) {
-        return $match.Value
-    }
-    $unicodeText = Convert-LegacyText $plainText
-    $safeText = $unicodeText.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
-    return $match.Groups[1].Value + $safeText + $match.Groups[3].Value
+function Get-SpreadsheetNamespaceManager($document) {
+    $namespaceManager = New-Object System.Xml.XmlNamespaceManager($document.NameTable)
+    $namespaceManager.AddNamespace("s", $spreadsheetNamespace)
+    return ,$namespaceManager
 }
 
-function Convert-TextsIn([string]$xml, [bool]$force) {
-    $builder = New-Object System.Text.StringBuilder
-    $position = 0
-    foreach ($match in $textPattern.Matches($xml)) {
-        [void]$builder.Append($xml.Substring($position, $match.Index - $position))
-        [void]$builder.Append((Convert-TextElement $match $force))
-        $position = $match.Index + $match.Length
-    }
-    [void]$builder.Append($xml.Substring($position))
-    return $builder.ToString()
+function Get-RichRunFont($properties, $namespaceManager) {
+    if ($null -eq $properties) { return $null }
+    $font = $properties.SelectSingleNode("s:rFont", $namespaceManager)
+    if ($null -eq $font) { return $null }
+    return $font.GetAttribute("val")
 }
 
-function Convert-SharedStringsXml([string]$xml) {
-    # first the rich runs: a run NAMING a legacy font is converted even
-    # if its text happens to be pure ASCII
-    $builder = New-Object System.Text.StringBuilder
-    $position = 0
-    foreach ($match in $runPattern.Matches($xml)) {
-        [void]$builder.Append($xml.Substring($position, $match.Index - $position))
-        $run = $match.Value
-        $namesLegacyFont = $false
-        foreach ($fontName in $legacyFonts) {
-            if ($run.Contains('val="' + $fontName + '"')) { $namesLegacyFont = $true }
+function Convert-StringContainer(
+    $container,
+    [bool]$force,
+    [bool]$allowFallback
+) {
+    $namespaceManager = Get-SpreadsheetNamespaceManager $container.OwnerDocument
+    $runs = $container.SelectNodes("s:r", $namespaceManager)
+    if ($runs.Count -gt 0) {
+        foreach ($run in $runs) {
+            $properties = $run.SelectSingleNode("s:rPr", $namespaceManager)
+            $runFont = Get-RichRunFont $properties $namespaceManager
+            $textNodes = $run.SelectNodes("s:t", $namespaceManager)
+            $runText = ""
+            foreach ($textNode in $textNodes) {
+                $runText += $textNode.InnerText
+            }
+
+            $shouldConvert = $legacyFonts -contains $runFont
+            if (
+                $runFont -eq $replacementFont -and
+                (Test-TextHasAnyLegacyCharacter $runText)
+            ) {
+                $shouldConvert = $true
+            }
+            if ([string]::IsNullOrWhiteSpace($runFont) -and $force) {
+                $shouldConvert = $true
+            }
+            if (
+                [string]::IsNullOrWhiteSpace($runFont) -and
+                $allowFallback -and
+                (Test-TextHasLegacySignature $runText)
+            ) {
+                $shouldConvert = $true
+            }
+            if ($shouldConvert) {
+                foreach ($textNode in $textNodes) {
+                    $textNode.InnerText = Convert-LegacyText $textNode.InnerText
+                }
+            }
+
+            if ($null -ne $properties) {
+                $font = $properties.SelectSingleNode("s:rFont", $namespaceManager)
+                if (
+                    $null -ne $font -and
+                    $legacyFonts -contains $font.GetAttribute("val")
+                ) {
+                    $font.SetAttribute("val", $replacementFont)
+                }
+            }
         }
-        [void]$builder.Append((Convert-TextsIn $run $namesLegacyFont))
-        $position = $match.Index + $match.Length
+        return
     }
-    [void]$builder.Append($xml.Substring($position))
-    $result = $builder.ToString()
 
-    # then everything else (plain strings) with the content test;
-    # already-converted text contains no legacy characters, so this
-    # second pass cannot damage it
-    $result = Convert-TextsIn $result $false
-
-    foreach ($fontName in $legacyFonts) {
-        $result = $result.Replace('val="' + $fontName + '"',
-                                  'val="' + $replacementFont + '"')
+    $textNodes = $container.SelectNodes("s:t", $namespaceManager)
+    $text = ""
+    foreach ($textNode in $textNodes) {
+        $text += $textNode.InnerText
     }
-    return $result
+    if ($force -or ($allowFallback -and (Test-TextHasLegacySignature $text))) {
+        foreach ($textNode in $textNodes) {
+            $textNode.InnerText = Convert-LegacyText $textNode.InnerText
+        }
+    }
+}
+
+function Get-CellStyleFlags($stylesDocument) {
+    $flags = New-Object System.Collections.ArrayList
+    if ($null -eq $stylesDocument) { return $flags }
+    $namespaceManager = Get-SpreadsheetNamespaceManager $stylesDocument
+
+    $fontFlags = New-Object System.Collections.ArrayList
+    foreach ($font in $stylesDocument.SelectNodes(
+        "/s:styleSheet/s:fonts/s:font",
+        $namespaceManager
+    )) {
+        $name = $font.SelectSingleNode("s:name", $namespaceManager)
+        $value = if ($null -eq $name) { "" } else { $name.GetAttribute("val") }
+        if ($legacyFonts -contains $value) {
+            [void]$fontFlags.Add("legacy")
+        } elseif (-not [string]::IsNullOrWhiteSpace($value)) {
+            [void]$fontFlags.Add("normal")
+        } else {
+            [void]$fontFlags.Add("unknown")
+        }
+    }
+
+    foreach ($cellFormat in $stylesDocument.SelectNodes(
+        "/s:styleSheet/s:cellXfs/s:xf",
+        $namespaceManager
+    )) {
+        $fontId = 0
+        if (
+            -not [int]::TryParse(
+                $cellFormat.GetAttribute("fontId"),
+                [ref]$fontId
+            ) -or
+            $fontId -lt 0 -or
+            $fontId -ge $fontFlags.Count
+        ) {
+            [void]$flags.Add("unknown")
+        } else {
+            [void]$flags.Add($fontFlags[$fontId])
+        }
+    }
+    return $flags
+}
+
+function Get-CellStyleFlag($cell, $styleFlags) {
+    $styleId = 0
+    if (
+        -not [int]::TryParse($cell.GetAttribute("s"), [ref]$styleId) -or
+        $styleId -lt 0 -or
+        $styleId -ge $styleFlags.Count
+    ) {
+        return "unknown"
+    }
+    return $styleFlags[$styleId]
+}
+
+function Rename-StyleFonts($stylesDocument) {
+    if ($null -eq $stylesDocument) { return }
+    $namespaceManager = Get-SpreadsheetNamespaceManager $stylesDocument
+    foreach ($name in $stylesDocument.SelectNodes("//s:name", $namespaceManager)) {
+        if ($legacyFonts -contains $name.GetAttribute("val")) {
+            $name.SetAttribute("val", $replacementFont)
+        }
+    }
 }
 
 function Update-ZipEntry($zip, [string]$entryName, [string]$newContent) {
@@ -150,17 +258,148 @@ Copy-Item -LiteralPath $sourceFile.FullName -Destination $targetPath -Force
 
 $zip = [System.IO.Compression.ZipFile]::Open($targetPath, "Update")
 try {
-    $sharedStrings = Read-ZipEntry $zip "xl/sharedStrings.xml"
-    if ($null -ne $sharedStrings) {
-        Update-ZipEntry $zip "xl/sharedStrings.xml" (Convert-SharedStringsXml $sharedStrings)
-    }
+    $stylesDocument = $null
     $stylesXml = Read-ZipEntry $zip "xl/styles.xml"
     if ($null -ne $stylesXml) {
-        foreach ($fontName in $legacyFonts) {
-            $stylesXml = $stylesXml.Replace('val="' + $fontName + '"',
-                                            'val="' + $replacementFont + '"')
+        $stylesDocument = New-Object System.Xml.XmlDocument
+        $stylesDocument.PreserveWhitespace = $true
+        $stylesDocument.LoadXml($stylesXml)
+    }
+    $styleFlags = Get-CellStyleFlags $stylesDocument
+
+    $sharedDocument = $null
+    $sharedXml = Read-ZipEntry $zip "xl/sharedStrings.xml"
+    if ($null -ne $sharedXml) {
+        $sharedDocument = New-Object System.Xml.XmlDocument
+        $sharedDocument.PreserveWhitespace = $true
+        $sharedDocument.LoadXml($sharedXml)
+    }
+
+    $worksheetNames = @()
+    foreach ($entry in $zip.Entries) {
+        if ($entry.FullName -match '^xl/worksheets/[^/]+\.xml$') {
+            $worksheetNames += $entry.FullName
         }
-        Update-ZipEntry $zip "xl/styles.xml" $stylesXml
+    }
+
+    $worksheetDocuments = @{}
+    $sharedReferences = @{}
+    foreach ($worksheetName in $worksheetNames) {
+        $worksheetXml = Read-ZipEntry $zip $worksheetName
+        if ($null -eq $worksheetXml) { continue }
+
+        $worksheetDocument = New-Object System.Xml.XmlDocument
+        $worksheetDocument.PreserveWhitespace = $true
+        $worksheetDocument.LoadXml($worksheetXml)
+        $worksheetDocuments[$worksheetName] = $worksheetDocument
+        $namespaceManager = Get-SpreadsheetNamespaceManager $worksheetDocument
+
+        foreach ($cell in $worksheetDocument.SelectNodes("//s:c", $namespaceManager)) {
+            $styleFlag = Get-CellStyleFlag $cell $styleFlags
+            $cellType = $cell.GetAttribute("t")
+
+            if ($cellType -eq "s") {
+                $value = $cell.SelectSingleNode("s:v", $namespaceManager)
+                $index = 0
+                if (
+                    $null -eq $value -or
+                    -not [int]::TryParse($value.InnerText, [ref]$index)
+                ) {
+                    continue
+                }
+                if (-not $sharedReferences.ContainsKey($index)) {
+                    $sharedReferences[$index] = @{
+                        legacy = New-Object System.Collections.ArrayList
+                        normal = New-Object System.Collections.ArrayList
+                        unknown = New-Object System.Collections.ArrayList
+                    }
+                }
+                [void]$sharedReferences[$index][$styleFlag].Add($value)
+            }
+            elseif ($cellType -eq "inlineStr") {
+                $inlineString = $cell.SelectSingleNode("s:is", $namespaceManager)
+                if ($null -ne $inlineString) {
+                    Convert-StringContainer `
+                        $inlineString `
+                        ($styleFlag -eq "legacy") `
+                        ($styleFlag -eq "unknown")
+                }
+            }
+        }
+    }
+
+    if ($null -ne $sharedDocument) {
+        $namespaceManager = Get-SpreadsheetNamespaceManager $sharedDocument
+        $sharedStrings = @($sharedDocument.SelectNodes(
+            "/s:sst/s:si",
+            $namespaceManager
+        ))
+
+        for ($index = 0; $index -lt $sharedStrings.Count; $index++) {
+            $sharedString = $sharedStrings[$index]
+            $references = if ($sharedReferences.ContainsKey($index)) {
+                $sharedReferences[$index]
+            } else {
+                @{
+                    legacy = New-Object System.Collections.ArrayList
+                    normal = New-Object System.Collections.ArrayList
+                    unknown = New-Object System.Collections.ArrayList
+                }
+            }
+
+            $hasLegacy = $references.legacy.Count -gt 0
+            $hasOther = (
+                $references.normal.Count -gt 0 -or
+                $references.unknown.Count -gt 0
+            )
+
+            if ($hasLegacy -and $hasOther) {
+                $convertedCopy = $sharedString.CloneNode($true)
+                Convert-StringContainer $convertedCopy $true $false
+                [void]$sharedDocument.DocumentElement.AppendChild($convertedCopy)
+                $newIndex = $sharedDocument.SelectNodes(
+                    "/s:sst/s:si",
+                    $namespaceManager
+                ).Count - 1
+                foreach ($value in $references.legacy) {
+                    $value.InnerText = [string]$newIndex
+                }
+                Convert-StringContainer `
+                    $sharedString `
+                    $false `
+                    (
+                        $references.unknown.Count -gt 0 -and
+                        $references.normal.Count -eq 0
+                    )
+            } else {
+                Convert-StringContainer `
+                    $sharedString `
+                    $hasLegacy `
+                    ($references.unknown.Count -gt 0)
+            }
+        }
+
+        $uniqueCount = $sharedDocument.SelectNodes(
+            "/s:sst/s:si",
+            $namespaceManager
+        ).Count
+        $sharedDocument.DocumentElement.SetAttribute(
+            "uniqueCount",
+            [string]$uniqueCount
+        )
+        Update-ZipEntry $zip "xl/sharedStrings.xml" $sharedDocument.OuterXml
+    }
+
+    foreach ($worksheetName in $worksheetDocuments.Keys) {
+        Update-ZipEntry `
+            $zip `
+            $worksheetName `
+            $worksheetDocuments[$worksheetName].OuterXml
+    }
+
+    if ($null -ne $stylesDocument) {
+        Rename-StyleFonts $stylesDocument
+        Update-ZipEntry $zip "xl/styles.xml" $stylesDocument.OuterXml
     }
 }
 finally {

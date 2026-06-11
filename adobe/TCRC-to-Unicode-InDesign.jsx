@@ -26,16 +26,21 @@ function convertText(text) {
     return result;
 }
 
-// Only 0xA0-0xFF characters are PROOF of legacy text (an em-dash also
-// exists in normal English text and must not trigger a conversion).
+// Conservative fallback for stories whose font metadata is unavailable.
 function looksLegacy(text) {
+    var mappedHighCharacters = 0;
+    var nonSpaceLength = 0;
     for (var i = 0; i < text.length; i++) {
         var code = text.charCodeAt(i);
+        if (!/\s/.test(text.charAt(i))) {
+            nonSpaceLength++;
+        }
         if (code >= 0xA0 && code <= 0xFF && MAP[code] !== undefined) {
-            return true;
+            mappedHighCharacters++;
         }
     }
-    return false;
+    return mappedHighCharacters >= 2 &&
+           mappedHighCharacters * 2 >= Math.max(nonSpaceLength, 1);
 }
 
 var LEGACY_FONTS = ["TCRC Bod-Yig", "TCRC Youtsoweb", "TCRC Youtso"];

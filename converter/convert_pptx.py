@@ -20,10 +20,11 @@ HOW TO USE
 """
 
 import argparse
-import html
+import io
 import re
 import sys
 import zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # reuse the conversion table and text converter from the docx module
@@ -31,75 +32,112 @@ from convert_docx import CONVERSION_TABLE, LEGACY_FONT_NAMES, convert_text
 
 REPLACEMENT_FONT = "TCRC Youtso Unicode"
 
-# One whole DrawingML run: from <a:r> to </a:r>.
-RUN_PATTERN = re.compile(r"(?s)<a:r\b[^>]*>.*?</a:r>")
-
-# The text inside a run: <a:t>text</a:t>.
-TEXT_PATTERN = re.compile(r"(?s)(<a:t(?:\s[^>]*)?>)(.*?)(</a:t>)")
+A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
+NS = {"a": A_NS}
 
 # The parts of a .pptx that contain slide text.
 PART_PATTERN = re.compile(
     r"^ppt/(slides|slideLayouts|slideMasters|notesSlides|notesMasters)/[^/]+\.xml$")
 
 
-def run_needs_conversion(run_xml):
-    """Does this run contain legacy TCRC text?"""
-
-    # Case 1: the run names one of the legacy fonts.
-    for font_name in LEGACY_FONT_NAMES:
-        if 'typeface="' + font_name + '"' in run_xml:
-            return True
-
-    # Case 2: the run uses the new font name, but legacy characters
-    # are still inside the text (a re-fonted, unconverted run).
-    if 'typeface="' + REPLACEMENT_FONT + '"' in run_xml:
-        for match in TEXT_PATTERN.finditer(run_xml):
-            plain_text = html.unescape(match.group(2))
-            for character in plain_text:
-                code = ord(character)
-                # only 0xA0-0xFF characters are PROOF of legacy text
-                # (em-dash etc. appear in normal English too)
-                if 0xA0 <= code <= 0xFF and code in CONVERSION_TABLE:
-                    return True
-
-    return False
+def register_namespaces(xml):
+    """Preserve the document's existing namespace prefixes."""
+    for _, namespace in ET.iterparse(io.StringIO(xml), events=("start-ns",)):
+        prefix, uri = namespace
+        ET.register_namespace(prefix or "", uri)
 
 
-def convert_text_inside_run(match):
-    opening_tag = match.group(1)
-    text = match.group(2)
-    closing_tag = match.group(3)
+def font_from_properties(properties):
+    """Return the Latin/complex-script font named by DrawingML properties."""
+    if properties is None:
+        return None
+    for tag_name in ("latin", "cs", "ea"):
+        font = properties.find("a:" + tag_name, NS)
+        if font is not None and font.get("typeface"):
+            return font.get("typeface")
+    return None
 
-    plain_text = html.unescape(text)
-    unicode_text = convert_text(plain_text)
-    safe_text = html.escape(unicode_text, quote=False)
 
-    return opening_tag + safe_text + closing_tag
+def text_has_legacy_signature(text):
+    """Detect re-fonted legacy text without treating normal punctuation as proof."""
+    return any(
+        0xA0 <= ord(character) <= 0xFF
+        and ord(character) in CONVERSION_TABLE
+        for character in text
+    )
+
+
+def text_looks_legacy_without_font(text):
+    """Conservative fallback when the font is inherited from another part."""
+    mapped_high_characters = sum(
+        1
+        for character in text
+        if 0xA0 <= ord(character) <= 0xFF
+        and ord(character) in CONVERSION_TABLE
+    )
+    if mapped_high_characters < 2:
+        return False
+    non_space_length = sum(1 for character in text if not character.isspace())
+    return mapped_high_characters * 2 >= max(non_space_length, 1)
+
+
+def paragraph_default_font(paragraph, parent_map):
+    """Resolve the run font inherited from paragraph/list defaults."""
+    paragraph_properties = paragraph.find("a:pPr", NS)
+    if paragraph_properties is not None:
+        font = font_from_properties(paragraph_properties.find("a:defRPr", NS))
+        if font:
+            return font
+        level = int(paragraph_properties.get("lvl", "0"))
+    else:
+        level = 0
+
+    parent = parent_map.get(paragraph)
+    while parent is not None and parent.tag != "{" + A_NS + "}txBody":
+        parent = parent_map.get(parent)
+    if parent is None:
+        return None
+
+    list_style = parent.find("a:lstStyle", NS)
+    if list_style is None:
+        return None
+    level_properties = list_style.find(
+        "a:lvl" + str(level + 1) + "pPr", NS
+    )
+    if level_properties is None:
+        return None
+    return font_from_properties(level_properties.find("a:defRPr", NS))
 
 
 def convert_part_xml(xml):
     """Convert one slide/layout/master/notes XML part."""
-    pieces = []
-    position = 0
+    register_namespaces(xml)
+    root = ET.fromstring(xml)
+    parent_map = {child: parent for parent in root.iter() for child in parent}
 
-    for match in RUN_PATTERN.finditer(xml):
-        pieces.append(xml[position:match.start()])
-        run = match.group(0)
-        if run_needs_conversion(run):
-            run = TEXT_PATTERN.sub(convert_text_inside_run, run)
-        pieces.append(run)
-        position = match.end()
-    pieces.append(xml[position:])
-    result = "".join(pieces)
+    for paragraph in root.findall(".//a:p", NS):
+        inherited_font = paragraph_default_font(paragraph, parent_map)
+        for run in paragraph.findall("a:r", NS):
+            run_properties = run.find("a:rPr", NS)
+            run_font = font_from_properties(run_properties) or inherited_font
+            text_nodes = run.findall("a:t", NS)
+            run_text = "".join(node.text or "" for node in text_nodes)
 
-    # rename the fonts (full quoted attribute, so "TCRC Youtso" cannot
-    # wrongly match inside "TCRC Youtso Unicode")
-    for font_name in LEGACY_FONT_NAMES:
-        old_attribute = 'typeface="' + font_name + '"'
-        new_attribute = 'typeface="' + REPLACEMENT_FONT + '"'
-        result = result.replace(old_attribute, new_attribute)
+            should_convert = run_font in LEGACY_FONT_NAMES
+            if run_font == REPLACEMENT_FONT and text_has_legacy_signature(run_text):
+                should_convert = True
+            if run_font is None and text_looks_legacy_without_font(run_text):
+                should_convert = True
 
-    return result
+            if should_convert:
+                for text_node in text_nodes:
+                    text_node.text = convert_text(text_node.text or "")
+
+    for element in root.iter():
+        if element.get("typeface") in LEGACY_FONT_NAMES:
+            element.set("typeface", REPLACEMENT_FONT)
+
+    return ET.tostring(root, encoding="unicode")
 
 
 def convert_pptx(source_path):

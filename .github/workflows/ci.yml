@@ -73,6 +73,8 @@ jobs:
         run: |
           $scripts = @(
             "converter\convert-docx.ps1",
+            "converter\convert-pptx.ps1",
+            "converter\convert-xlsx.ps1",
             "converter\convert-document.ps1",
             "windows-test\Test-TCRC-Windows.ps1"
           )

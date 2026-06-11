@@ -1,15 +1,19 @@
-TCRC Youtso Unicode 1.2.0
+TCRC Youtso Unicode 1.3.0
 =========================
 
 User experience
 ---------------
 - One installer provides the font, keyboard, converter, and uninstaller.
 - A visible TCRC Document Converter shortcut is installed on the desktop.
-- Users choose or drag a .doc or .docx file and click Convert to Unicode.
-- The converter creates a new (Unicode).docx file and preserves the original.
-- Word-file right-click commands open the same visible converter.
+- Users choose or drag Word, PowerPoint, or Excel files and click Convert to
+  Unicode.
+- The converter supports .doc/.docx, .ppt/.pptx, and .xls/.xlsx files.
+- The converter creates a new modern-format (Unicode) file and preserves the
+  original.
+- Office-file right-click commands open the same visible converter.
 - Ctrl+Alt+N prepares selected Excel cells for Tibetan-looking numbers.
 - Excel stores real numeric values, so SUM and arithmetic continue to work.
+- Photoshop, Illustrator, and InDesign conversion scripts are included.
 
 Reliability and safety
 ----------------------
@@ -22,10 +26,16 @@ Reliability and safety
 - Installer staging is recreated on every build to prevent stale files.
 - The AutoHotkey runtime download is pinned and checksum-verified.
 - Product-specific process names avoid stopping unrelated AutoHotkey scripts.
+- Excel conversion follows cell font styles, handles inline strings, and
+  preserves shared strings used by both legacy and normal-font cells.
+- PowerPoint conversion follows direct and inherited paragraph font settings.
 
 Verification
 ------------
 - Python and PowerShell converters produce matching Word XML.
+- Python and PowerShell converters cover PowerPoint inherited fonts and Excel
+  inline/mixed shared strings.
+- Ordinary accented Latin text is preserved during Excel conversion.
 - The supplied legacy document matches the verified Unicode reference.
 - Windows tests cover installation, shortcuts, registry integration,
   conversion, source preservation, Microsoft Word, and Excel calculation.
